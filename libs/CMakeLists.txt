@@ -1,0 +1,7 @@
+add_subdirectory(core)
+add_subdirectory(environment)
+add_subdirectory(grammar)
+add_subdirectory(structure)
+add_subdirectory(algorithm)
+add_subdirectory(geometry)
+add_subdirectory(renderer)

@@ -1,0 +1,6 @@
+if(MSVC)
+  add_compile_options(/W4 /WX /utf-8 /wd4100)
+  add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
+else()
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+endif()

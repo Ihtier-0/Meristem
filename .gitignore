@@ -1,0 +1,9 @@
+build/
+out/
+.vs/
+*.user
+*.suo
+*.db
+*.opendb
+CMakeSettings.json
+.claude/
