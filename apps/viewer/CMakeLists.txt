@@ -1,4 +1,9 @@
-add_executable(viewer main.cpp)
+add_executable(viewer
+  main.cpp
+  Window.h    Window.cpp
+  ViewerUI.h  ViewerUI.cpp
+  examples.h
+)
 
 target_link_libraries(viewer PRIVATE
   algorithm
