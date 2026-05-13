@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include <glm/vec4.hpp>
+
 #include "renderer/IRenderer.h"
 
 namespace D {
@@ -16,12 +18,14 @@ class OpenGLRenderer : public IRenderer {
   void endFrame() override;
   void resize(uint32_t w, uint32_t h) override;
 
-  void setZoom(float zoom) { m_zoom = zoom; }
-  void setPan(float x, float y) { m_panX = x; m_panY = y; }
+  void setZoom(float zoom)              { m_zoom = zoom; }
+  void setPan(float x, float y)         { m_panX = x; m_panY = y; }
+  void setClearColor(const glm::vec4& c){ m_clearColor = c; }
 
-  float zoom() const { return m_zoom; }
-  float panX() const { return m_panX; }
-  float panY() const { return m_panY; }
+  float      zoom()       const { return m_zoom; }
+  float      panX()       const { return m_panX; }
+  float      panY()       const { return m_panY; }
+  glm::vec4  clearColor() const { return m_clearColor; }
 
  private:
   void compileShaders();
@@ -36,9 +40,10 @@ class OpenGLRenderer : public IRenderer {
   int m_locProj = -1;
   int m_locColor = -1;
 
-  float m_zoom = 1.f;
-  float m_panX = 0.f;
-  float m_panY = 0.f;
+  float     m_zoom = 1.f;
+  float     m_panX = 0.f;
+  float     m_panY = 0.f;
+  glm::vec4 m_clearColor = {0.08f, 0.08f, 0.08f, 1.f};
 };
 
 }  // namespace D

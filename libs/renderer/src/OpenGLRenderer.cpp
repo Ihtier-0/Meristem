@@ -90,7 +90,7 @@ void OpenGLRenderer::updateProjection() {
 }
 
 void OpenGLRenderer::beginFrame() {
-  glClearColor(0.08f, 0.08f, 0.08f, 1.f);
+  glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
   glClear(GL_COLOR_BUFFER_BIT);
   updateProjection();
 }

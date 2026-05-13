@@ -47,8 +47,12 @@ ViewerUI::ViewerUI(LSystemGrammar& grammar, D0LSystemAlgorithm& algo,
 }
 
 void ViewerUI::draw() {
-  drawControlPanel();
-  drawGrammarPanel();
+  m_renderer.setClearColor(m_bgColor);
+
+  float nextY = 10.f;
+  drawControlPanel(nextY);
+  drawGrammarPanel(nextY);
+  drawSettingsPanel(nextY);
 }
 
 void ViewerUI::rebuildMesh() {
@@ -74,9 +78,10 @@ void ViewerUI::applyGrammar() {
   rebuildMesh();
 }
 
-void ViewerUI::drawControlPanel() {
-  ImGui::SetNextWindowPos({10, 10}, ImGuiCond_Always);
-  ImGui::SetNextWindowSize({260, 0}, ImGuiCond_Always);
+void ViewerUI::drawControlPanel(float& nextY) {
+  constexpr float kW = 280.f;
+  ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
+  ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
   ImGui::Begin("L-System", nullptr, ImGuiWindowFlags_NoResize);
 
   ImGui::Text("Generation: %d", m_algo.generation());
@@ -84,29 +89,25 @@ void ViewerUI::drawControlPanel() {
               std::get<StringStructure>(m_algo.getStructure()).derivation.size());
   ImGui::Separator();
 
-  if (ImGui::Button("Step")) {
-    m_algo.step();
-    rebuildMesh();
-  }
+  if (ImGui::Button("Step")) { m_algo.step(); rebuildMesh(); }
   ImGui::SameLine();
-  if (ImGui::Button("Reset")) {
-    m_algo.reset();
-    rebuildMesh();
-  }
+  if (ImGui::Button("Reset")) { m_algo.reset(); rebuildMesh(); }
 
   ImGui::Separator();
-  if (ImGui::SliderFloat("Angle", &m_angleOverride, 5.f, 90.f))   rebuildMesh();
-  if (ImGui::SliderFloat("Step len", &m_stepLen, 0.1f, 10.f))     rebuildMesh();
-  if (ImGui::SliderFloat("Zoom",  &m_zoom,  0.1f, 20.f))          m_renderer.setZoom(m_zoom);
-  if (ImGui::SliderFloat("Pan X", &m_panX, -100.f, 100.f))        m_renderer.setPan(m_panX, m_panY);
-  if (ImGui::SliderFloat("Pan Y", &m_panY, -100.f, 100.f))        m_renderer.setPan(m_panX, m_panY);
+  if (ImGui::SliderFloat("Angle",    &m_angleOverride, 5.f,    90.f))   rebuildMesh();
+  if (ImGui::SliderFloat("Step len", &m_stepLen,       0.1f,   10.f))   rebuildMesh();
+  if (ImGui::SliderFloat("Zoom",     &m_zoom,          0.1f,   20.f))   m_renderer.setZoom(m_zoom);
+  if (ImGui::SliderFloat("Pan X",    &m_panX,         -100.f, 100.f))   m_renderer.setPan(m_panX, m_panY);
+  if (ImGui::SliderFloat("Pan Y",    &m_panY,         -100.f, 100.f))   m_renderer.setPan(m_panX, m_panY);
 
+  nextY += ImGui::GetWindowHeight() + 5.f;
   ImGui::End();
 }
 
-void ViewerUI::drawGrammarPanel() {
-  ImGui::SetNextWindowPos({280, 10}, ImGuiCond_Always);
-  ImGui::SetNextWindowSize({340, 0}, ImGuiCond_Always);
+void ViewerUI::drawGrammarPanel(float& nextY) {
+  constexpr float kW = 280.f;
+  ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
+  ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
   ImGui::Begin("Grammar", nullptr, ImGuiWindowFlags_NoResize);
 
   ImGui::SetNextItemWidth(-1);
@@ -118,28 +119,36 @@ void ViewerUI::drawGrammarPanel() {
 
   for (int i = 0; i < static_cast<int>(m_ruleEdits.size()); ++i) {
     ImGui::PushID(i);
-
-    ImGui::SetNextItemWidth(24);
+    ImGui::SetNextItemWidth(22);
     ImGui::InputText("##pred", m_ruleEdits[i].predecessor, 2);
     ImGui::SameLine();
     ImGui::TextUnformatted("->");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(210);
+    ImGui::SetNextItemWidth(180);
     ImGui::InputText("##succ", m_ruleEdits[i].successor, sizeof(m_ruleEdits[i].successor));
     ImGui::SameLine();
-    if (ImGui::Button("X")) {
-      m_ruleEdits.erase(m_ruleEdits.begin() + i);
-      --i;
-    }
-
+    if (ImGui::Button("X")) { m_ruleEdits.erase(m_ruleEdits.begin() + i); --i; }
     ImGui::PopID();
   }
 
   if (ImGui::Button("+ Rule")) m_ruleEdits.emplace_back();
-
   ImGui::Separator();
   if (ImGui::Button("Apply")) applyGrammar();
 
+  nextY += ImGui::GetWindowHeight() + 5.f;
+  ImGui::End();
+}
+
+void ViewerUI::drawSettingsPanel(float& nextY) {
+  constexpr float kW = 280.f;
+  ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
+  ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
+  ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoResize);
+
+  ImGui::ColorEdit3("Line color",       reinterpret_cast<float*>(&m_lineColor));
+  ImGui::ColorEdit3("Background color", reinterpret_cast<float*>(&m_bgColor));
+
+  nextY += ImGui::GetWindowHeight() + 5.f;
   ImGui::End();
 }
 

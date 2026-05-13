@@ -26,7 +26,7 @@ int main() try {
   window.run([&] {
     ui.draw();
     renderer.beginFrame();
-    renderer.submit({&mesh, glm::mat4(1.f), {0.6f, 0.9f, 0.5f, 1.f}});
+    renderer.submit({&mesh, glm::mat4(1.f), ui.lineColor()});
     renderer.endFrame();
   });
 
