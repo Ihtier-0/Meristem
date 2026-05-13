@@ -10,6 +10,7 @@
 #include "algorithm/IPlantAlgorithm.h"
 #include "algorithm/D0LSystemAlgorithm.h"
 #include "algorithm/StochasticLSystemAlgorithm.h"
+#include "algorithm/ContextSensitiveLSystemAlgorithm.h"
 #include "geometry/TurtleBuilder2D.h"
 #include "geometry/Mesh.h"
 #include "renderer/OpenGLRenderer.h"
@@ -26,7 +27,15 @@ class ViewerUI {
   const Mesh& mesh() const { return m_mesh; }
 
  private:
-  enum class AlgoType { D0L = 0, Stochastic = 1 };
+  enum class AlgoType { D0L = 0, Stochastic = 1, ContextSensitive = 2 };
+
+  struct RuleEdit {
+    char  predecessor[2] = {};
+    char  leftContext[2] = {};
+    char  rightContext[2]= {};
+    char  successor[256] = {};
+    float probability    = 1.f;
+  };
 
   void drawControlPanel(float& nextY);
   void drawGrammarPanel(float& nextY);
@@ -34,20 +43,15 @@ class ViewerUI {
   void rebuildMesh();
   void applyGrammar();
   void switchAlgo(AlgoType type);
-
-  // Returns the grammar currently managed by the active algorithm
-  LSystemGrammar& activeGrammar();
+  static RuleEdit ruleToEdit(const Rule& rule);
 
   OpenGLRenderer& m_renderer;
 
   AlgoType m_algoType = AlgoType::D0L;
   std::unique_ptr<IPlantAlgorithm> m_algo;
 
-  // Owned grammar (edited by Grammar panel and reapplied)
   LSystemGrammar m_grammar;
-
-  // Stochastic seed (only meaningful when m_algoType == Stochastic)
-  int m_seed = 42;
+  int            m_seed = 42;
 
   TurtleBuilder2D m_turtle;
   Mesh            m_mesh;
@@ -60,12 +64,6 @@ class ViewerUI {
 
   glm::vec4 m_lineColor = {0.6f, 0.9f, 0.5f, 1.f};
   glm::vec4 m_bgColor   = {0.08f, 0.08f, 0.08f, 1.f};
-
-  struct RuleEdit {
-    char predecessor[2]  = {};
-    char successor[256]  = {};
-    float probability    = 1.f;
-  };
 
   char                  m_axiomBuf[256] = {};
   std::vector<RuleEdit> m_ruleEdits;

@@ -22,6 +22,20 @@ static Word stringToWord(std::string_view s) {
   return w;
 }
 
+// ── ViewerUI static helpers ───────────────────────────────────────────────────
+
+ViewerUI::RuleEdit ViewerUI::ruleToEdit(const Rule& rule) {
+  ViewerUI::RuleEdit re;
+  re.predecessor[0] = rule.predecessor;
+  re.probability    = rule.probability;
+  if (rule.leftContext)  re.leftContext[0]  = *rule.leftContext;
+  if (rule.rightContext) re.rightContext[0] = *rule.rightContext;
+  auto str  = wordToString(rule.successor({}));
+  auto slen = std::min(str.size(), sizeof(re.successor) - 1);
+  std::copy_n(str.begin(), slen, re.successor);
+  return re;
+}
+
 // ── ViewerUI ─────────────────────────────────────────────────────────────────
 
 ViewerUI::ViewerUI(OpenGLRenderer& renderer)
@@ -38,15 +52,8 @@ ViewerUI::ViewerUI(OpenGLRenderer& renderer)
   std::copy_n(axiomStr.begin(), len, m_axiomBuf);
 
   m_ruleEdits.reserve(m_grammar.rules.size());
-  for (const auto& rule : m_grammar.rules) {
-    RuleEdit re;
-    re.predecessor[0] = rule.predecessor;
-    re.probability = rule.probability;
-    auto str = wordToString(rule.successor({}));
-    auto slen = std::min(str.size(), sizeof(re.successor) - 1);
-    std::copy_n(str.begin(), slen, re.successor);
-    m_ruleEdits.push_back(re);
-  }
+  for (const auto& rule : m_grammar.rules)
+    m_ruleEdits.push_back(ruleToEdit(rule));
 }
 
 void ViewerUI::draw() {
@@ -67,35 +74,32 @@ void ViewerUI::rebuildMesh() {
 void ViewerUI::switchAlgo(AlgoType type) {
   m_algoType = type;
 
-  LSystemGrammar g = (type == AlgoType::D0L)
-      ? examples::binaryTree()
-      : examples::stochasticPlant();
-  m_grammar = g;
-
-  if (type == AlgoType::D0L)
-    m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-  else
-    m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
+  switch (type) {
+    case AlgoType::D0L:
+      m_grammar = examples::binaryTree();
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
+    case AlgoType::Stochastic:
+      m_grammar = examples::stochasticPlant();
+      m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
+      break;
+    case AlgoType::ContextSensitive:
+      m_grammar = examples::contextSensitivePlant();
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
+  }
 
   m_angleOverride = m_grammar.angle;
   m_turtle.setAngle(m_angleOverride);
 
-  // Rebuild grammar panel state
   auto axiomStr = wordToString(m_grammar.axiom);
   auto len = std::min(axiomStr.size(), sizeof(m_axiomBuf) - 1);
   std::fill(std::begin(m_axiomBuf), std::end(m_axiomBuf), '\0');
   std::copy_n(axiomStr.begin(), len, m_axiomBuf);
 
   m_ruleEdits.clear();
-  for (const auto& rule : m_grammar.rules) {
-    RuleEdit re;
-    re.predecessor[0] = rule.predecessor;
-    re.probability = rule.probability;
-    auto str = wordToString(rule.successor({}));
-    auto slen = std::min(str.size(), sizeof(re.successor) - 1);
-    std::copy_n(str.begin(), slen, re.successor);
-    m_ruleEdits.push_back(re);
-  }
+  for (const auto& rule : m_grammar.rules)
+    m_ruleEdits.push_back(ruleToEdit(rule));
 
   rebuildMesh();
 }
@@ -109,6 +113,8 @@ void ViewerUI::applyGrammar() {
     Rule rule;
     rule.predecessor = re.predecessor[0];
     rule.probability = re.probability;
+    if (re.leftContext[0]  != '\0') rule.leftContext  = re.leftContext[0];
+    if (re.rightContext[0] != '\0') rule.rightContext = re.rightContext[0];
     std::string succStr = re.successor;
     rule.successor = [succStr](std::span<const ParamValue>) -> Word {
       return stringToWord(succStr);
@@ -116,10 +122,14 @@ void ViewerUI::applyGrammar() {
     m_grammar.rules.push_back(std::move(rule));
   }
 
-  if (m_algoType == AlgoType::D0L)
-    m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-  else
-    m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
+  switch (m_algoType) {
+    case AlgoType::Stochastic:
+      m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
+      break;
+    default:
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
+  }
 
   rebuildMesh();
 }
@@ -131,10 +141,10 @@ void ViewerUI::drawControlPanel(float& nextY) {
   ImGui::Begin("L-System", nullptr, ImGuiWindowFlags_NoResize);
 
   // Algorithm type combo
-  static const char* kAlgoNames[] = {"D0L (deterministic)", "Stochastic"};
+  static const char* kAlgoNames[] = {"D0L (deterministic)", "Stochastic", "Context-sensitive (1L)"};
   int currentItem = static_cast<int>(m_algoType);
   ImGui::SetNextItemWidth(-1);
-  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 2)) {
+  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 3)) {
     switchAlgo(static_cast<AlgoType>(currentItem));
   }
 
@@ -184,15 +194,25 @@ void ViewerUI::drawGrammarPanel(float& nextY) {
   ImGui::Separator();
 
   const bool isStochastic = (m_algoType == AlgoType::Stochastic);
+  const bool isContext    = (m_algoType == AlgoType::ContextSensitive);
 
   for (int i = 0; i < static_cast<int>(m_ruleEdits.size()); ++i) {
     ImGui::PushID(i);
+    if (isContext) {
+      ImGui::SetNextItemWidth(22); ImGui::InputText("##lc", m_ruleEdits[i].leftContext, 2);
+      ImGui::SameLine(); ImGui::TextUnformatted("<");
+      ImGui::SameLine();
+    }
     ImGui::SetNextItemWidth(22);
     ImGui::InputText("##pred", m_ruleEdits[i].predecessor, 2);
+    if (isContext) {
+      ImGui::SameLine(); ImGui::TextUnformatted(">");
+      ImGui::SameLine(); ImGui::SetNextItemWidth(22);
+      ImGui::InputText("##rc", m_ruleEdits[i].rightContext, 2);
+    }
+    ImGui::SameLine(); ImGui::TextUnformatted("->");
     ImGui::SameLine();
-    ImGui::TextUnformatted("->");
-    ImGui::SameLine();
-    float succW = isStochastic ? 110.f : 180.f;
+    float succW = isStochastic ? 110.f : (isContext ? 100.f : 180.f);
     ImGui::SetNextItemWidth(succW);
     ImGui::InputText("##succ", m_ruleEdits[i].successor, sizeof(m_ruleEdits[i].successor));
     if (isStochastic) {
