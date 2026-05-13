@@ -1,5 +1,7 @@
 #pragma once
 
+#include <random>
+
 #include "core/types.h"
 #include "grammar/Rule.h"
 
@@ -13,6 +15,7 @@ class LSystemGrammar {
 
   Word derive(const Word& current) const;
   Word deriveN(int n) const;
+  Word deriveStochastic(const Word& current, std::mt19937& rng) const;
 };
 
 }  // namespace D
