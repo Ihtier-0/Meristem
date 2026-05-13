@@ -105,4 +105,65 @@ inline LSystemGrammar contextSensitivePlant() {
   return g;
 }
 
+// Context-sensitive (2L): ABP fractal plant base with two-sided context rules.
+// In the string F+[[X]-X]-F[-FX]+X the X's have three distinct neighbour pairs:
+//   [ < X > ]  — innermost nested X  → mirrored sub-tree (swap +/-)
+//   F < X > ]  — X inside [-FX]      → simpler alternating pattern
+//   default    — all other X's        → standard ABP formula
+// Both left AND right context are checked simultaneously (true 2L).
+// Press Step 3–4 times.
+inline LSystemGrammar contextSensitive2LPlant() {
+  LSystemGrammar g;
+  g.angle = 25.f;
+  g.axiom = {Symbol('X')};
+
+  // [ < X > ] → F-[[X]+X]+F[+FX]-X  (mirrored — MUST be before default)
+  g.rules.push_back({
+      .predecessor  = 'X',
+      .leftContext  = '[',
+      .rightContext = ']',
+      .successor    = [](std::span<const ParamValue>) -> Word {
+        return {Symbol('F'), Symbol('-'), Symbol('['), Symbol('['),
+                Symbol('X'), Symbol(']'), Symbol('+'), Symbol('X'),
+                Symbol(']'), Symbol('+'), Symbol('F'), Symbol('['),
+                Symbol('+'), Symbol('F'), Symbol('X'), Symbol(']'),
+                Symbol('-'), Symbol('X')};
+      },
+  });
+
+  // F < X > ] → F[+X]F[-X]X  (simpler alternating — MUST be before default)
+  g.rules.push_back({
+      .predecessor  = 'X',
+      .leftContext  = 'F',
+      .rightContext = ']',
+      .successor    = [](std::span<const ParamValue>) -> Word {
+        return {Symbol('F'), Symbol('['), Symbol('+'), Symbol('X'),
+                Symbol(']'), Symbol('F'), Symbol('['), Symbol('-'),
+                Symbol('X'), Symbol(']'), Symbol('X')};
+      },
+  });
+
+  // X → F+[[X]-X]-F[-FX]+X  (default ABP fractal plant)
+  g.rules.push_back({
+      .predecessor = 'X',
+      .successor   = [](std::span<const ParamValue>) -> Word {
+        return {Symbol('F'), Symbol('+'), Symbol('['), Symbol('['),
+                Symbol('X'), Symbol(']'), Symbol('-'), Symbol('X'),
+                Symbol(']'), Symbol('-'), Symbol('F'), Symbol('['),
+                Symbol('-'), Symbol('F'), Symbol('X'), Symbol(']'),
+                Symbol('+'), Symbol('X')};
+      },
+  });
+
+  // F → FF
+  g.rules.push_back({
+      .predecessor = 'F',
+      .successor   = [](std::span<const ParamValue>) -> Word {
+        return {Symbol('F'), Symbol('F')};
+      },
+  });
+
+  return g;
+}
+
 }  // namespace D::examples

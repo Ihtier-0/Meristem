@@ -27,7 +27,7 @@ class ViewerUI {
   const Mesh& mesh() const { return m_mesh; }
 
  private:
-  enum class AlgoType { D0L = 0, Stochastic = 1, ContextSensitive = 2 };
+  enum class AlgoType { D0L = 0, Stochastic = 1, ContextSensitive = 2, ContextSensitive2L = 3 };
 
   struct RuleEdit {
     char  predecessor[2] = {};

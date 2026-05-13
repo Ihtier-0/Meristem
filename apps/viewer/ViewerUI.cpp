@@ -87,6 +87,10 @@ void ViewerUI::switchAlgo(AlgoType type) {
       m_grammar = examples::contextSensitivePlant();
       m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
       break;
+    case AlgoType::ContextSensitive2L:
+      m_grammar = examples::contextSensitive2LPlant();
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
   }
 
   m_angleOverride = m_grammar.angle;
@@ -135,16 +139,18 @@ void ViewerUI::applyGrammar() {
 }
 
 void ViewerUI::drawControlPanel(float& nextY) {
-  constexpr float kW = 280.f;
+  constexpr float kW = 340.f;
   ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
   ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
   ImGui::Begin("L-System", nullptr, ImGuiWindowFlags_NoResize);
 
   // Algorithm type combo
-  static const char* kAlgoNames[] = {"D0L (deterministic)", "Stochastic", "Context-sensitive (1L)"};
+  static const char* kAlgoNames[] = {
+      "D0L (deterministic)", "Stochastic",
+      "Context-sensitive (1L)", "Context-sensitive (2L)"};
   int currentItem = static_cast<int>(m_algoType);
   ImGui::SetNextItemWidth(-1);
-  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 3)) {
+  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 4)) {
     switchAlgo(static_cast<AlgoType>(currentItem));
   }
 
@@ -181,7 +187,7 @@ void ViewerUI::drawControlPanel(float& nextY) {
 }
 
 void ViewerUI::drawGrammarPanel(float& nextY) {
-  constexpr float kW = 280.f;
+  constexpr float kW = 340.f;
   ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
   ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
   ImGui::Begin("Grammar", nullptr, ImGuiWindowFlags_NoResize);
@@ -194,7 +200,8 @@ void ViewerUI::drawGrammarPanel(float& nextY) {
   ImGui::Separator();
 
   const bool isStochastic = (m_algoType == AlgoType::Stochastic);
-  const bool isContext    = (m_algoType == AlgoType::ContextSensitive);
+  const bool isContext    = (m_algoType == AlgoType::ContextSensitive ||
+                             m_algoType == AlgoType::ContextSensitive2L);
 
   for (int i = 0; i < static_cast<int>(m_ruleEdits.size()); ++i) {
     ImGui::PushID(i);
@@ -212,7 +219,7 @@ void ViewerUI::drawGrammarPanel(float& nextY) {
     }
     ImGui::SameLine(); ImGui::TextUnformatted("->");
     ImGui::SameLine();
-    float succW = isStochastic ? 110.f : (isContext ? 100.f : 180.f);
+    float succW = isStochastic ? 140.f : (isContext ? 160.f : 230.f);
     ImGui::SetNextItemWidth(succW);
     ImGui::InputText("##succ", m_ruleEdits[i].successor, sizeof(m_ruleEdits[i].successor));
     if (isStochastic) {
@@ -234,7 +241,7 @@ void ViewerUI::drawGrammarPanel(float& nextY) {
 }
 
 void ViewerUI::drawSettingsPanel(float& nextY) {
-  constexpr float kW = 280.f;
+  constexpr float kW = 340.f;
   ImGui::SetNextWindowPos({10, nextY}, ImGuiCond_Always);
   ImGui::SetNextWindowSize({kW, 0}, ImGuiCond_Always);
   ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoResize);
