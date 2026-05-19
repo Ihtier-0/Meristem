@@ -18,7 +18,8 @@ int main() try {
   window.run([&] {
     ui.draw();
     renderer.beginFrame();
-    renderer.submit({&ui.mesh(), glm::mat4(1.f), ui.lineColor()});
+    renderer.submit({&ui.mesh(),       glm::mat4(1.f), ui.lineColor()});
+    renderer.submit({&ui.flowerMesh(), glm::mat4(1.f), ui.flowerColor()});
     renderer.endFrame();
   });
 
