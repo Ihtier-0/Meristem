@@ -2,6 +2,32 @@
 
 namespace D {
 
+// Bracket-aware left context: skip +/-/| and [...] groups going backwards.
+// In  F[+A][-A]  the biological parent of each A is F, not '+' or '-'.
+static char leftBioContext(const Word& w, size_t i) {
+  int j = static_cast<int>(i) - 1;
+  while (j >= 0) {
+    char c = w[static_cast<size_t>(j)].letter;
+    if (c == '+' || c == '-' || c == '|') {
+      --j;
+    } else if (c == ']') {
+      // skip the entire matching [...] group
+      int depth = 1; --j;
+      while (j >= 0 && depth > 0) {
+        char cc = w[static_cast<size_t>(j)].letter;
+        if      (cc == ']') ++depth;
+        else if (cc == '[') --depth;
+        --j;
+      }
+    } else if (c == '[') {
+      --j; // branch open: step past it to the parent symbol
+    } else {
+      return c;
+    }
+  }
+  return '\0';
+}
+
 Word LSystemGrammar::derive(const Word& current) const {
   Word result;
   result.reserve(current.size() * 2);
@@ -14,7 +40,7 @@ Word LSystemGrammar::derive(const Word& current) const {
       if (rule.predecessor != sym.letter) continue;
 
       if (rule.leftContext &&
-          (i == 0 || current[i - 1].letter != *rule.leftContext))
+          leftBioContext(current, i) != *rule.leftContext)
         continue;
       if (rule.rightContext &&
           (i + 1 >= current.size() || current[i + 1].letter != *rule.rightContext))
@@ -52,7 +78,7 @@ Word LSystemGrammar::deriveStochastic(const Word& current, std::mt19937& rng) co
     for (const Rule& rule : rules) {
       if (rule.predecessor != sym.letter) continue;
       if (rule.leftContext &&
-          (i == 0 || current[i - 1].letter != *rule.leftContext))
+          leftBioContext(current, i) != *rule.leftContext)
         continue;
       if (rule.rightContext &&
           (i + 1 >= current.size() || current[i + 1].letter != *rule.rightContext))

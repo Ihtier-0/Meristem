@@ -15,6 +15,23 @@ static std::string wordToString(const Word& word) {
   return s;
 }
 
+static std::string wordToParametricString(const Word& word) {
+  std::string s;
+  for (const auto& sym : word) {
+    s += sym.letter;
+    if (!sym.params.empty()) {
+      s += '(';
+      for (size_t i = 0; i < sym.params.size(); ++i) {
+        if (i > 0) s += ',';
+        float v = std::visit([](auto x){ return static_cast<float>(x); }, sym.params[i]);
+        s += std::to_string(v);
+      }
+      s += ')';
+    }
+  }
+  return s;
+}
+
 static Word stringToWord(std::string_view s) {
   Word w;
   w.reserve(s.size());
@@ -65,10 +82,42 @@ void ViewerUI::draw() {
   drawSettingsPanel(nextY);
 }
 
+void ViewerUI::applyParametricGrammar() {
+  using PRule = ParametricLSystemAlgorithm::PRule;
+
+  Word axiom = detail::parseParametricWord(m_paramAxiomBuf, {});
+  std::vector<PRule> rules;
+  for (const auto& pe : m_paramRuleEdits) {
+    if (pe.predecessor[0] == '\0') continue;
+    PRule r;
+    r.predecessor = pe.predecessor[0];
+    // split param names by comma
+    std::string names = pe.paramNames;
+    std::string cur;
+    for (char c : names) {
+      if (c == ',') { if (!cur.empty()) { r.paramNames.push_back(cur); cur.clear(); } }
+      else if (c != ' ') cur += c;
+    }
+    if (!cur.empty()) r.paramNames.push_back(cur);
+    r.successorExpr = pe.successorExpr;
+    rules.push_back(std::move(r));
+  }
+  auto palgo = std::make_unique<ParametricLSystemAlgorithm>(
+      std::move(axiom), std::move(rules), m_angleOverride);
+  std::map<std::string, float> globals;
+  for (const auto& pd : m_paramDefs)
+    if (pd.name[0] != '\0') globals[pd.name] = pd.value;
+  palgo->setGlobalParams(std::move(globals));
+  m_algo = std::move(palgo);
+  rebuildMesh();
+}
+
 void ViewerUI::rebuildMesh() {
   m_turtle.setAngle(m_angleOverride);
   m_turtle.setStep(m_stepLen);
+  m_turtle.setFlowerRadius(m_flowerRadius);
   m_mesh = buildMesh(m_turtle, m_algo->getStructure());
+  m_flowerMesh = m_turtle.lastFlowerMesh();
 }
 
 void ViewerUI::switchAlgo(AlgoType type) {
@@ -91,6 +140,49 @@ void ViewerUI::switchAlgo(AlgoType type) {
       m_grammar = examples::contextSensitive2LPlant();
       m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
       break;
+    case AlgoType::ContextSensitiveFlower:
+      m_grammar = examples::contextSensitiveFlower();
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
+    case AlgoType::Parametric: {
+      auto pa = examples::parametricTree();
+      m_angleOverride = pa.angle();
+      m_turtle.setAngle(m_angleOverride);
+      // populate parametric UI state
+      {
+        auto axiomStr = wordToParametricString(pa.axiomWord());
+        auto len = std::min(axiomStr.size(), sizeof(m_paramAxiomBuf) - 1);
+        std::fill(std::begin(m_paramAxiomBuf), std::end(m_paramAxiomBuf), '\0');
+        std::copy_n(axiomStr.begin(), len, m_paramAxiomBuf);
+      }
+      m_paramRuleEdits.clear();
+      for (const auto& r : pa.prules()) {
+        ParametricEdit pe;
+        pe.predecessor[0] = r.predecessor;
+        std::string names;
+        for (size_t k = 0; k < r.paramNames.size(); ++k) {
+          if (k) names += ',';
+          names += r.paramNames[k];
+        }
+        auto nlen = std::min(names.size(), sizeof(pe.paramNames) - 1);
+        std::copy_n(names.begin(), nlen, pe.paramNames);
+        auto slen = std::min(r.successorExpr.size(), sizeof(pe.successorExpr) - 1);
+        std::copy_n(r.successorExpr.begin(), slen, pe.successorExpr);
+        m_paramRuleEdits.push_back(pe);
+      }
+      m_paramDefs.clear();
+      for (const auto& [name, val] : pa.globalParams()) {
+        ParamDef pd;
+        auto nlen = std::min(name.size(), sizeof(pd.name) - 1);
+        std::copy_n(name.begin(), nlen, pd.name);
+        pd.value = val;
+        m_paramDefs.push_back(pd);
+      }
+      m_algo = std::make_unique<ParametricLSystemAlgorithm>(pa);
+      // skip the generic grammar rebuild below
+      rebuildMesh();
+      return;
+    }
   }
 
   m_angleOverride = m_grammar.angle;
@@ -126,6 +218,11 @@ void ViewerUI::applyGrammar() {
     m_grammar.rules.push_back(std::move(rule));
   }
 
+  if (m_algoType == AlgoType::Parametric) {
+    applyParametricGrammar();
+    return;
+  }
+
   switch (m_algoType) {
     case AlgoType::Stochastic:
       m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
@@ -147,10 +244,11 @@ void ViewerUI::drawControlPanel(float& nextY) {
   // Algorithm type combo
   static const char* kAlgoNames[] = {
       "D0L (deterministic)", "Stochastic",
-      "Context-sensitive (1L)", "Context-sensitive (2L)"};
+      "Context-sensitive (1L)", "Context-sensitive (2L)",
+      "Parametric", "Context-sensitive (flower K)"};
   int currentItem = static_cast<int>(m_algoType);
   ImGui::SetNextItemWidth(-1);
-  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 4)) {
+  if (ImGui::Combo("##algo", &currentItem, kAlgoNames, 6)) {
     switchAlgo(static_cast<AlgoType>(currentItem));
   }
 
@@ -199,9 +297,58 @@ void ViewerUI::drawGrammarPanel(float& nextY) {
 
   ImGui::Separator();
 
-  const bool isStochastic = (m_algoType == AlgoType::Stochastic);
-  const bool isContext    = (m_algoType == AlgoType::ContextSensitive ||
-                             m_algoType == AlgoType::ContextSensitive2L);
+  const bool isStochastic  = (m_algoType == AlgoType::Stochastic);
+  const bool isContext     = (m_algoType == AlgoType::ContextSensitive ||
+                              m_algoType == AlgoType::ContextSensitive2L ||
+                              m_algoType == AlgoType::ContextSensitiveFlower);
+  const bool isParametric  = (m_algoType == AlgoType::Parametric);
+
+  if (isParametric) {
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputText("##paxiom", m_paramAxiomBuf, sizeof(m_paramAxiomBuf));
+    ImGui::SameLine(0,0); ImGui::Text(" Axiom");
+    ImGui::Separator();
+    for (int i = 0; i < static_cast<int>(m_paramRuleEdits.size()); ++i) {
+      ImGui::PushID(i);
+      ImGui::SetNextItemWidth(18); ImGui::InputText("##pp", m_paramRuleEdits[i].predecessor, 2);
+      ImGui::SameLine(); ImGui::TextUnformatted("(");
+      ImGui::SameLine(); ImGui::SetNextItemWidth(50);
+      ImGui::InputText("##pn", m_paramRuleEdits[i].paramNames, sizeof(m_paramRuleEdits[i].paramNames));
+      ImGui::SameLine(); ImGui::TextUnformatted(") ->");
+      ImGui::SameLine(); ImGui::SetNextItemWidth(170);
+      ImGui::InputText("##pe", m_paramRuleEdits[i].successorExpr, sizeof(m_paramRuleEdits[i].successorExpr));
+      ImGui::SameLine();
+      if (ImGui::Button("X")) { m_paramRuleEdits.erase(m_paramRuleEdits.begin() + i); --i; }
+      ImGui::PopID();
+    }
+    if (ImGui::Button("+ Rule")) m_paramRuleEdits.emplace_back();
+    ImGui::Separator();
+    ImGui::TextUnformatted("Global params:");
+    for (int i = 0; i < static_cast<int>(m_paramDefs.size()); ++i) {
+      ImGui::PushID(100 + i);
+      ImGui::SetNextItemWidth(40);
+      ImGui::InputText("##pname", m_paramDefs[i].name, sizeof(m_paramDefs[i].name));
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(180);
+      if (ImGui::SliderFloat("##pval", &m_paramDefs[i].value, 0.01f, 2.f)) {
+        auto* pa = static_cast<ParametricLSystemAlgorithm*>(m_algo.get());
+        std::map<std::string, float> globals;
+        for (const auto& pd : m_paramDefs)
+          if (pd.name[0] != '\0') globals[pd.name] = pd.value;
+        pa->setGlobalParams(std::move(globals));
+        rebuildMesh();
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("X")) { m_paramDefs.erase(m_paramDefs.begin() + i); --i; }
+      ImGui::PopID();
+    }
+    if (ImGui::Button("+ Param")) m_paramDefs.emplace_back();
+    ImGui::Separator();
+    if (ImGui::Button("Apply")) applyGrammar();
+    nextY += ImGui::GetWindowHeight() + 5.f;
+    ImGui::End();
+    return;
+  }
 
   for (int i = 0; i < static_cast<int>(m_ruleEdits.size()); ++i) {
     ImGui::PushID(i);
@@ -248,6 +395,8 @@ void ViewerUI::drawSettingsPanel(float& nextY) {
 
   ImGui::ColorEdit3("Line color",       reinterpret_cast<float*>(&m_lineColor));
   ImGui::ColorEdit3("Background color", reinterpret_cast<float*>(&m_bgColor));
+  ImGui::ColorEdit3("Flower color",     reinterpret_cast<float*>(&m_flowerColor));
+  if (ImGui::SliderFloat("Flower radius", &m_flowerRadius, 0.05f, 3.f)) rebuildMesh();
 
   nextY += ImGui::GetWindowHeight() + 5.f;
   ImGui::End();
