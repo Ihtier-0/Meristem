@@ -8,15 +8,14 @@
 
 namespace D {
 
-ControlPanel::ControlPanel(TreeCanvas* canvas, QWidget* parent)
-    : QScrollArea(parent) {
+ControlPanel::ControlPanel(TreeCanvas* canvas, QWidget* parent) : QScrollArea(parent) {
   setWidgetResizable(true);
   setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   setMinimumWidth(360);
   setMaximumWidth(380);
 
   auto* root = new QWidget;
-  auto* lay  = new QVBoxLayout(root);
+  auto* lay = new QVBoxLayout(root);
   lay->setSpacing(6);
   lay->setContentsMargins(6, 6, 6, 6);
 
@@ -28,10 +27,9 @@ ControlPanel::ControlPanel(TreeCanvas* canvas, QWidget* parent)
 
   setWidget(root);
 
-  connect(canvas, &TreeCanvas::stateChanged, m_lsystem, &LSystemWidget::onStateChanged);
   connect(canvas, &TreeCanvas::algoSwitched, m_lsystem, &LSystemWidget::onAlgoSwitched);
   connect(canvas, &TreeCanvas::algoSwitched, m_grammar, &GrammarWidget::onAlgoSwitched);
-  connect(canvas, &TreeCanvas::viewChanged,  m_lsystem, &LSystemWidget::onViewChanged);
+  connect(canvas, &TreeCanvas::viewChanged, m_lsystem, &LSystemWidget::onViewChanged);
 }
 
 }  // namespace D

@@ -23,12 +23,6 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
   m_algoCombo->setCurrentIndex(static_cast<int>(canvas->algoType()));
   lay->addWidget(m_algoCombo);
 
-  m_infoLabel = new QLabel;
-  onStateChanged(canvas->generation(), canvas->symbolCount());
-  lay->addWidget(m_infoLabel);
-
-  lay->addSpacing(4);
-
   m_seedRow = new QWidget;
   auto* seedLay = new QHBoxLayout(m_seedRow);
   seedLay->setContentsMargins(0, 0, 0, 0);
@@ -87,11 +81,6 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
   });
 
   updateSeedVisibility();
-}
-
-void LSystemWidget::onStateChanged(int gen, int syms) {
-  m_infoLabel->setText(
-      QString("Generation: %1    Symbols: %2").arg(gen).arg(syms));
 }
 
 void LSystemWidget::onAlgoSwitched(int) {

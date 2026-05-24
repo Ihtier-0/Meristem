@@ -21,11 +21,11 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   // ── Page 0: normal grammar ────────────────────────────────────────────────────
 
   auto* normalPage = new QWidget;
-  auto* nLay       = new QVBoxLayout(normalPage);
+  auto* nLay = new QVBoxLayout(normalPage);
   nLay->setContentsMargins(0, 0, 0, 0);
 
   auto* axiomRow = new QWidget;
-  auto* axHLay   = new QHBoxLayout(axiomRow);
+  auto* axHLay = new QHBoxLayout(axiomRow);
   axHLay->setContentsMargins(0, 0, 0, 0);
   axHLay->addWidget(new QLabel("Axiom:"));
   m_axiomEdit = new QLineEdit(canvas->axiomBuf());
@@ -39,23 +39,23 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   nLay->addWidget(m_rulesWidget);
 
   auto* addRuleBtn = new QPushButton("+ Rule");
-  auto* applyBtn   = new QPushButton("Apply");
+  auto* applyBtn = new QPushButton("Apply");
   nLay->addWidget(addRuleBtn);
   nLay->addWidget(applyBtn);
 
   connect(addRuleBtn, &QPushButton::clicked, this, &GrammarWidget::onAddRuleClicked);
-  connect(applyBtn,   &QPushButton::clicked, this, &GrammarWidget::onApplyClicked);
+  connect(applyBtn, &QPushButton::clicked, this, &GrammarWidget::onApplyClicked);
 
   m_grammarStack->addWidget(normalPage);
 
   // ── Page 1: parametric grammar ────────────────────────────────────────────────
 
   auto* paramPage = new QWidget;
-  auto* pLay      = new QVBoxLayout(paramPage);
+  auto* pLay = new QVBoxLayout(paramPage);
   pLay->setContentsMargins(0, 0, 0, 0);
 
   auto* paramAxRow = new QWidget;
-  auto* paHLay     = new QHBoxLayout(paramAxRow);
+  auto* paHLay = new QHBoxLayout(paramAxRow);
   paHLay->setContentsMargins(0, 0, 0, 0);
   paHLay->addWidget(new QLabel("Axiom:"));
   m_paramAxiomEdit = new QLineEdit(canvas->paramAxiomBuf());
@@ -79,14 +79,14 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   m_paramDefsLayout->setSpacing(2);
   pLay->addWidget(m_paramDefsWidget);
 
-  auto* addDefBtn  = new QPushButton("+ Param");
-  auto* applyPBtn  = new QPushButton("Apply");
+  auto* addDefBtn = new QPushButton("+ Param");
+  auto* applyPBtn = new QPushButton("Apply");
   pLay->addWidget(addDefBtn);
   pLay->addWidget(applyPBtn);
 
   connect(addPRuleBtn, &QPushButton::clicked, this, &GrammarWidget::onAddParamRuleClicked);
-  connect(addDefBtn,   &QPushButton::clicked, this, &GrammarWidget::onAddParamDefClicked);
-  connect(applyPBtn,   &QPushButton::clicked, this, &GrammarWidget::onApplyClicked);
+  connect(addDefBtn, &QPushButton::clicked, this, &GrammarWidget::onAddParamDefClicked);
+  connect(applyPBtn, &QPushButton::clicked, this, &GrammarWidget::onApplyClicked);
 
   m_grammarStack->addWidget(paramPage);
   lay->addWidget(m_grammarStack);
@@ -100,19 +100,23 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
 // ── Slots ─────────────────────────────────────────────────────────────────────
 
 void GrammarWidget::onAlgoSwitched(int typeInt) {
-  auto type    = static_cast<TreeCanvas::AlgoType>(typeInt);
+  auto type = static_cast<TreeCanvas::AlgoType>(typeInt);
   bool isParam = (type == TreeCanvas::AlgoType::Parametric);
 
   m_grammarStack->setCurrentIndex(isParam ? 1 : 0);
 
   if (isParam) {
-    { QSignalBlocker b(m_paramAxiomEdit);
-      m_paramAxiomEdit->setText(m_canvas->paramAxiomBuf()); }
+    {
+      QSignalBlocker b(m_paramAxiomEdit);
+      m_paramAxiomEdit->setText(m_canvas->paramAxiomBuf());
+    }
     rebuildParamRuleRows();
     rebuildParamDefRows();
   } else {
-    { QSignalBlocker b(m_axiomEdit);
-      m_axiomEdit->setText(m_canvas->axiomBuf()); }
+    {
+      QSignalBlocker b(m_axiomEdit);
+      m_axiomEdit->setText(m_canvas->axiomBuf());
+    }
     rebuildRuleRows();
   }
 }
@@ -124,38 +128,37 @@ void GrammarWidget::onApplyClicked() {
     std::vector<TreeCanvas::ParametricEdit> rules;
     for (const auto& row : m_paramRows) {
       TreeCanvas::ParametricEdit pe;
-      auto pred   = row.pred->text().toStdString();
+      auto pred = row.pred->text().toStdString();
       auto params = row.params->text().toStdString();
-      auto expr   = row.expr->text().toStdString();
+      auto expr = row.expr->text().toStdString();
       if (!pred.empty()) pe.predecessor[0] = pred[0];
-      auto plen = std::min(params.size(), sizeof(pe.paramNames)   - 1);
-      auto elen = std::min(expr.size(),   sizeof(pe.successorExpr) - 1);
+      auto plen = std::min(params.size(), sizeof(pe.paramNames) - 1);
+      auto elen = std::min(expr.size(), sizeof(pe.successorExpr) - 1);
       std::copy_n(params.begin(), plen, pe.paramNames);
-      std::copy_n(expr.begin(),   elen, pe.successorExpr);
+      std::copy_n(expr.begin(), elen, pe.successorExpr);
       rules.push_back(pe);
     }
     std::vector<TreeCanvas::ParamDef> defs;
     for (const auto& row : m_defRows) {
       TreeCanvas::ParamDef pd;
-      auto nm   = row.name->text().toStdString();
+      auto nm = row.name->text().toStdString();
       auto nlen = std::min(nm.size(), sizeof(pd.name) - 1);
       std::copy_n(nm.begin(), nlen, pd.name);
       pd.value = static_cast<float>(row.value->value());
       defs.push_back(pd);
     }
-    m_canvas->applyParametricGrammar(
-        m_paramAxiomEdit->text().toStdString(), rules, defs);
+    m_canvas->applyParametricGrammar(m_paramAxiomEdit->text().toStdString(), rules, defs);
   } else {
     std::vector<TreeCanvas::RuleEdit> rules;
     for (const auto& row : m_normalRows) {
       TreeCanvas::RuleEdit re;
       auto pred = row.pred->text().toStdString();
-      auto lc   = row.leftCtx->text().toStdString();
-      auto rc   = row.rightCtx->text().toStdString();
+      auto lc = row.leftCtx->text().toStdString();
+      auto rc = row.rightCtx->text().toStdString();
       auto succ = row.succ->text().toStdString();
       if (!pred.empty()) re.predecessor[0] = pred[0];
-      if (!lc.empty())   re.leftContext[0]  = lc[0];
-      if (!rc.empty())   re.rightContext[0] = rc[0];
+      if (!lc.empty()) re.leftContext[0] = lc[0];
+      if (!rc.empty()) re.rightContext[0] = rc[0];
       auto slen = std::min(succ.size(), sizeof(re.successor) - 1);
       std::copy_n(succ.begin(), slen, re.successor);
       re.probability = static_cast<float>(row.prob->value());
@@ -165,31 +168,28 @@ void GrammarWidget::onApplyClicked() {
   }
 }
 
-void GrammarWidget::onAddRuleClicked()      { addNormalRuleRow({}); }
+void GrammarWidget::onAddRuleClicked() { addNormalRuleRow({}); }
 void GrammarWidget::onAddParamRuleClicked() { addParamRuleRow({}); }
-void GrammarWidget::onAddParamDefClicked()  { addParamDefRow({}); }
+void GrammarWidget::onAddParamDefClicked() { addParamDefRow({}); }
 
 // ── Row builders ──────────────────────────────────────────────────────────────
 
 void GrammarWidget::rebuildRuleRows() {
   for (auto& row : m_normalRows) delete row.widget;
   m_normalRows.clear();
-  for (const auto& re : m_canvas->ruleEdits())
-    addNormalRuleRow(re);
+  for (const auto& re : m_canvas->ruleEdits()) addNormalRuleRow(re);
 }
 
 void GrammarWidget::rebuildParamRuleRows() {
   for (auto& row : m_paramRows) delete row.widget;
   m_paramRows.clear();
-  for (const auto& pe : m_canvas->paramRuleEdits())
-    addParamRuleRow(pe);
+  for (const auto& pe : m_canvas->paramRuleEdits()) addParamRuleRow(pe);
 }
 
 void GrammarWidget::rebuildParamDefRows() {
   for (auto& row : m_defRows) delete row.widget;
   m_defRows.clear();
-  for (const auto& pd : m_canvas->paramDefs())
-    addParamDefRow(pd);
+  for (const auto& pd : m_canvas->paramDefs()) addParamDefRow(pd);
 }
 
 void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
@@ -199,10 +199,10 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
 
-  bool isContext = (m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive  ||
+  bool isContext = (m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive ||
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive2L ||
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitiveFlower);
-  bool isStoch   = (m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
+  bool isStoch = (m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
 
   row.leftCtx = new QLineEdit(re.leftContext[0] ? QString(re.leftContext[0]) : "");
   row.leftCtx->setPlaceholderText("lc");
@@ -247,8 +247,11 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
 
   connect(delBtn, &QPushButton::clicked, this, [this, w]() {
     auto it = std::find_if(m_normalRows.begin(), m_normalRows.end(),
-        [w](const NormalRuleRow& r) { return r.widget == w; });
-    if (it != m_normalRows.end()) { delete it->widget; m_normalRows.erase(it); }
+                           [w](const NormalRuleRow& r) { return r.widget == w; });
+    if (it != m_normalRows.end()) {
+      delete it->widget;
+      m_normalRows.erase(it);
+    }
   });
 }
 
@@ -280,8 +283,11 @@ void GrammarWidget::addParamRuleRow(const TreeCanvas::ParametricEdit& pe) {
 
   connect(delBtn, &QPushButton::clicked, this, [this, w]() {
     auto it = std::find_if(m_paramRows.begin(), m_paramRows.end(),
-        [w](const ParamRuleRow& r) { return r.widget == w; });
-    if (it != m_paramRows.end()) { delete it->widget; m_paramRows.erase(it); }
+                           [w](const ParamRuleRow& r) { return r.widget == w; });
+    if (it != m_paramRows.end()) {
+      delete it->widget;
+      m_paramRows.erase(it);
+    }
   });
 }
 
@@ -307,9 +313,7 @@ void GrammarWidget::addParamDefRow(const TreeCanvas::ParamDef& pd) {
   delBtn->setFixedWidth(24);
   hlay->addWidget(delBtn);
 
-  connect(row.value, &QDoubleSpinBox::valueChanged, this, [this](double) {
-    onApplyClicked();
-  });
+  connect(row.value, &QDoubleSpinBox::valueChanged, this, [this](double) { onApplyClicked(); });
 
   m_paramDefsLayout->addWidget(row.widget);
   QWidget* w = row.widget;
@@ -317,8 +321,11 @@ void GrammarWidget::addParamDefRow(const TreeCanvas::ParamDef& pd) {
 
   connect(delBtn, &QPushButton::clicked, this, [this, w]() {
     auto it = std::find_if(m_defRows.begin(), m_defRows.end(),
-        [w](const ParamDefRow& r) { return r.widget == w; });
-    if (it != m_defRows.end()) { delete it->widget; m_defRows.erase(it); }
+                           [w](const ParamDefRow& r) { return r.widget == w; });
+    if (it != m_defRows.end()) {
+      delete it->widget;
+      m_defRows.erase(it);
+    }
   });
 }
 

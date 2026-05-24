@@ -1,25 +1,27 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include <QColor>
 #include <QOpenGLWidget>
 #include <QPoint>
 
-#include "algorithm/IPlantAlgorithm.h"
 #include "algorithm/D0LSystemAlgorithm.h"
-#include "algorithm/StochasticLSystemAlgorithm.h"
+#include "algorithm/IPlantAlgorithm.h"
 #include "algorithm/ParametricLSystemAlgorithm.h"
-#include "geometry/TurtleBuilder2D.h"
+#include "algorithm/StochasticLSystemAlgorithm.h"
+
 #include "geometry/Mesh.h"
+#include "geometry/TurtleBuilder2D.h"
 #include "grammar/LSystemGrammar.h"
+
 #include "renderer/OpenGLRenderer.h"
 
 namespace D {
 
-class TreeCanvas : public QOpenGLWidget {
+class TreeCanvas final : public QOpenGLWidget {
   Q_OBJECT
 
  public:
@@ -33,10 +35,10 @@ class TreeCanvas : public QOpenGLWidget {
   };
 
   struct RuleEdit {
-    char  predecessor[2]{};
-    char  leftContext[2]{};
-    char  rightContext[2]{};
-    char  successor[256]{};
+    char predecessor[2]{};
+    char leftContext[2]{};
+    char rightContext[2]{};
+    char successor[256]{};
     float probability = 1.f;
   };
 
@@ -47,33 +49,33 @@ class TreeCanvas : public QOpenGLWidget {
   };
 
   struct ParamDef {
-    char  name[16]{};
+    char name[16]{};
     float value = 0.f;
   };
 
-  explicit TreeCanvas(QWidget* parent = nullptr);
+  explicit TreeCanvas(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
   // State accessors — ControlPanel reads these at startup
-  AlgoType algoType()    const { return m_algoType; }
-  int      generation()  const;
-  int      symbolCount() const;
-  double   angle()       const { return m_angleOverride; }
-  double   stepLen()     const { return m_stepLen; }
-  double   zoom()        const { return m_zoom; }
-  double   panX()        const { return m_panX; }
-  double   panY()        const { return m_panY; }
-  int      seed()        const { return m_seed; }
-  double        flowerRadius() const { return m_flowerRadius; }
-  TurtleSymbols symbols()      const { return m_turtle.symbols(); }
-  QColor        lineColor()    const;
-  QColor        flowerColor()  const;
-  QColor        bgColor()      const;
+  AlgoType algoType() const { return m_algoType; }
+  int generation() const;
+  int symbolCount() const;
+  double angle() const { return m_angleOverride; }
+  double stepLen() const { return m_stepLen; }
+  double zoom() const { return m_zoom; }
+  double panX() const { return m_panX; }
+  double panY() const { return m_panY; }
+  int seed() const { return m_seed; }
+  double flowerRadius() const { return m_flowerRadius; }
+  TurtleSymbols symbols() const { return m_turtle.symbols(); }
+  QColor lineColor() const;
+  QColor flowerColor() const;
+  QColor bgColor() const;
 
-  const char*                        axiomBuf()       const { return m_axiomBuf; }
-  const char*                        paramAxiomBuf()  const { return m_paramAxiomBuf; }
-  const std::vector<RuleEdit>&       ruleEdits()      const { return m_ruleEdits; }
+  const char* axiomBuf() const { return m_axiomBuf; }
+  const char* paramAxiomBuf() const { return m_paramAxiomBuf; }
+  const std::vector<RuleEdit>& ruleEdits() const { return m_ruleEdits; }
   const std::vector<ParametricEdit>& paramRuleEdits() const { return m_paramRuleEdits; }
-  const std::vector<ParamDef>&       paramDefs()      const { return m_paramDefs; }
+  const std::vector<ParamDef>& paramDefs() const { return m_paramDefs; }
 
  public slots:
   void stepGeneration();
@@ -94,9 +96,8 @@ class TreeCanvas : public QOpenGLWidget {
   void setSymbols(TurtleSymbols s);
 
   void applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules);
-  void applyParametricGrammar(const std::string& axiom,
-                               const std::vector<ParametricEdit>& rules,
-                               const std::vector<ParamDef>& params);
+  void applyParametricGrammar(const std::string& axiom, const std::vector<ParametricEdit>& rules,
+                              const std::vector<ParamDef>& params);
 
  signals:
   void stateChanged(int generation, int symbols);
@@ -117,44 +118,38 @@ class TreeCanvas : public QOpenGLWidget {
   void initLSystem();
   void rebuildMesh();
   void populateGrammarBuffers();
-  static RuleEdit    ruleToEdit(const Rule& rule);
-  static std::string wordToString(const Word& word);
-  static std::string wordToParametricString(const Word& word);
-  static Word        stringToWord(std::string_view s);
-  static QColor toQColor(Vec4 c);
-  static Vec4   toGlm(QColor c);
 
   std::unique_ptr<OpenGLRenderer> m_renderer;
 
   QPoint m_lastMousePos;
-  bool   m_panning = false;
+  bool m_panning = false;
 
-  AlgoType                         m_algoType = AlgoType::D0L;
+  AlgoType m_algoType = AlgoType::D0L;
   std::unique_ptr<IPlantAlgorithm> m_algo;
-  LSystemGrammar                   m_grammar;
-  int                              m_seed = 42;
+  LSystemGrammar m_grammar;
+  int m_seed = 42;
 
   TurtleBuilder2D m_turtle;
-  Mesh            m_mesh;
-  Mesh            m_flowerMesh;
+  Mesh m_mesh;
+  Mesh m_flowerMesh;
 
   float m_angleOverride = 25.f;
-  float m_stepLen       = 1.f;
-  float m_zoom          = 1.f;
-  float m_panX          = 0.f;
-  float m_panY          = 0.f;
-  float m_flowerRadius  = 0.3f;
+  float m_stepLen = 1.f;
+  float m_zoom = 1.f;
+  float m_panX = 0.f;
+  float m_panY = 0.f;
+  float m_flowerRadius = 0.3f;
 
-  Vec4 m_lineColor   = {0.6f, 0.9f, 0.5f, 1.f};
+  Vec4 m_lineColor = {0.6f, 0.9f, 0.5f, 1.f};
   Vec4 m_flowerColor = {1.0f, 0.0f, 0.0f, 1.f};
-  Vec4 m_bgColor     = {0.08f, 0.08f, 0.08f, 1.f};
+  Vec4 m_bgColor = {0.08f, 0.08f, 0.08f, 1.f};
 
-  char                        m_axiomBuf[256]{};
-  std::vector<RuleEdit>       m_ruleEdits;
+  char m_axiomBuf[256]{};
+  std::vector<RuleEdit> m_ruleEdits;
 
-  char                        m_paramAxiomBuf[256]{};
+  char m_paramAxiomBuf[256]{};
   std::vector<ParametricEdit> m_paramRuleEdits;
-  std::vector<ParamDef>       m_paramDefs;
+  std::vector<ParamDef> m_paramDefs;
 };
 
 }  // namespace D

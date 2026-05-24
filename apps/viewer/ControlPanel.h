@@ -4,11 +4,11 @@
 
 namespace D {
 
-class TreeCanvas;
-class LSystemWidget;
 class GrammarWidget;
+class LSystemWidget;
+class TreeCanvas;
 
-class ControlPanel : public QScrollArea {
+class ControlPanel final : public QScrollArea {
   Q_OBJECT
 
  public:

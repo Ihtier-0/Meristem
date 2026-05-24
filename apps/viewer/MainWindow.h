@@ -9,19 +9,19 @@ namespace D {
 class TreeCanvas;
 class ControlPanel;
 
-class MainWindow : public QMainWindow {
+class MainWindow final : public QMainWindow {
   Q_OBJECT
 
  public:
-  explicit MainWindow(QWidget* parent = nullptr);
+  explicit MainWindow(QWidget* parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 
  private:
   void createMenus();
   void refreshStatus();
 
-  TreeCanvas*   m_canvas      = nullptr;
-  ControlPanel* m_panel       = nullptr;
-  QLabel*       m_statusLabel = nullptr;
+  TreeCanvas* m_canvas = nullptr;
+  ControlPanel* m_panel = nullptr;
+  QLabel* m_statusLabel = nullptr;
 };
 
 }  // namespace D
