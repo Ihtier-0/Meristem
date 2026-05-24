@@ -88,6 +88,10 @@ char rightCtx(const Word& w, size_t i, std::string_view ignore, std::optional<ch
 // ── Grammar methods ───────────────────────────────────────────────────────────
 
 bool LSystemGrammar::valid() const {
+  // push/pop must not appear in ignore — they have structural roles.
+  if (push && ignore.find(*push) != std::string::npos) return false;
+  if (pop && ignore.find(*pop) != std::string::npos) return false;
+
   // Context-char validation only applies in Biological mode.
   if (contextMode == ContextMode::Biological) {
     for (const Rule& r : rules) {
@@ -534,6 +538,34 @@ TEST_SUITE("LSystemGrammar/valid()") {
     // One rule, p=1.0 -> sum is exactly 1.0 -> valid.
     D::LSystemGrammar g;
     g.rules = {D::ruleFor('A').to("B").withProbability(1.f)};
+    CHECK(g.valid());
+  }
+
+  TEST_CASE("push in ignore -> invalid") {
+    // push symbol ('[') is also in ignore -> structural conflict -> invalid.
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.ignore = "[+-";
+    g.rules = {D::ruleFor('A').to("B")};
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("pop in ignore -> invalid") {
+    // pop symbol (']') is also in ignore -> structural conflict -> invalid.
+    D::LSystemGrammar g;
+    g.pop = ']';
+    g.ignore = "+-]";
+    g.rules = {D::ruleFor('A').to("B")};
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("push/pop not in ignore -> valid") {
+    // push and pop are set but absent from ignore -> no conflict -> valid.
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.pop = ']';
+    g.ignore = "+-|";
+    g.rules = {D::ruleFor('A').to("B")};
     CHECK(g.valid());
   }
 
