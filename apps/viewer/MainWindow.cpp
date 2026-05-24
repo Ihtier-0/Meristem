@@ -1,12 +1,11 @@
 #include "MainWindow.h"
 
-#include <QColorDialog>
 #include <QDockWidget>
-#include <QInputDialog>
 #include <QMenuBar>
 #include <QMessageBox>
 
 #include "ControlPanel.h"
+#include "SettingsDialog.h"
 #include "TreeCanvas.h"
 #include "core/version.h"
 
@@ -31,37 +30,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 void MainWindow::createMenus() {
-  // ── Settings ──────────────────────────────────────────────────────────────────
+  // ── Edit ──────────────────────────────────────────────────────────────────────
 
-  auto* settings = menuBar()->addMenu("&Settings");
+  auto* edit = menuBar()->addMenu("&Edit");
 
-  auto* lineColorAct = settings->addAction("Line Color...");
-  connect(lineColorAct, &QAction::triggered, this, [this]() {
-    QColor c = QColorDialog::getColor(m_canvas->lineColor(), this, "Line Color");
-    if (c.isValid()) m_canvas->setLineColor(c);
-  });
-
-  auto* bgColorAct = settings->addAction("Background Color...");
-  connect(bgColorAct, &QAction::triggered, this, [this]() {
-    QColor c = QColorDialog::getColor(m_canvas->bgColor(), this, "Background Color");
-    if (c.isValid()) m_canvas->setBgColor(c);
-  });
-
-  auto* flowerColorAct = settings->addAction("Flower Color...");
-  connect(flowerColorAct, &QAction::triggered, this, [this]() {
-    QColor c = QColorDialog::getColor(m_canvas->flowerColor(), this, "Flower Color");
-    if (c.isValid()) m_canvas->setFlowerColor(c);
-  });
-
-  settings->addSeparator();
-
-  auto* radAct = settings->addAction("Flower Radius...");
-  connect(radAct, &QAction::triggered, this, [this]() {
-    bool ok = false;
-    double r = QInputDialog::getDouble(
-        this, "Flower Radius", "Radius:",
-        m_canvas->flowerRadius(), 0.05, 3.0, 2, &ok);
-    if (ok) m_canvas->setFlowerRadius(r);
+  auto* settingsAct = edit->addAction("Settings...");
+  connect(settingsAct, &QAction::triggered, this, [this]() {
+    SettingsDialog dlg(m_canvas, this);
+    dlg.exec();
   });
 
   // ── Help ──────────────────────────────────────────────────────────────────────

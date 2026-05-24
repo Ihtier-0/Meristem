@@ -2,6 +2,9 @@ set(_headers
   MainWindow.h
   TreeCanvas.h
   ControlPanel.h
+  LSystemWidget.h
+  GrammarWidget.h
+  SettingsDialog.h
   examples.h
 )
 set(_sources
@@ -9,6 +12,9 @@ set(_sources
   MainWindow.cpp
   TreeCanvas.cpp
   ControlPanel.cpp
+  LSystemWidget.cpp
+  GrammarWidget.cpp
+  SettingsDialog.cpp
 )
 add_executable(viewer ${_headers} ${_sources})
 
