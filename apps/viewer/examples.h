@@ -8,8 +8,8 @@ namespace D::examples {
 // A -> F[+A][-A], F -> FF, delta = 25 deg
 inline LSystemGrammar binaryTree() {
   LSystemGrammar g;
-  g.angle = 25.f;
-  g.axiom = {Symbol('A')};
+
+  g.axiom = w("A");
   g.rules = {
       ruleFor('A').to("F[+A][-A]"),
       ruleFor('F').to("FF"),
@@ -22,8 +22,8 @@ inline LSystemGrammar binaryTree() {
 //   F -p0.4-> F[+F]F
 inline LSystemGrammar stochasticPlant() {
   LSystemGrammar g;
-  g.angle = 25.f;
-  g.axiom = {Symbol('F')};
+
+  g.axiom = w("F");
   g.rules = {
       ruleFor('F').to("F[+F]F[-F]F").withProbability(0.6f),
       ruleFor('F').to("F[+F]F").withProbability(0.4f),
@@ -39,8 +39,11 @@ inline LSystemGrammar stochasticPlant() {
 // Result: an organic, asymmetric plant. Press Step 3-5 times.
 inline LSystemGrammar contextSensitivePlant() {
   LSystemGrammar g;
-  g.angle = 25.f;
-  g.axiom = {Symbol('X')};
+
+  g.axiom = w("X");
+  g.ignore = "+-|";
+  g.push = '[';
+  g.pop = ']';
   g.rules = {
       // F < X → F-[[X]+X]+F[+FX]-X  (context rule — MUST come before default)
       ruleFor('X').withLeftContext('F').to("F-[[X]+X]+F[+FX]-X"),
@@ -61,8 +64,11 @@ inline LSystemGrammar contextSensitivePlant() {
 // Press Step 3–4 times.
 inline LSystemGrammar contextSensitive2LPlant() {
   LSystemGrammar g;
-  g.angle = 25.f;
-  g.axiom = {Symbol('X')};
+
+  g.axiom = w("X");
+  // '[' and ']' are used as context chars — requires Strict mode so they are
+  // matched literally rather than treated as transparent branch delimiters.
+  g.contextMode = ContextMode::Strict;
   g.rules = {
       // [ < X > ] → F-[[X]+X]+F[+FX]-X  (mirrored — MUST be before default)
       ruleFor('X').withLeftContext('[').withRightContext(']').to("F-[[X]+X]+F[+FX]-X"),
@@ -101,15 +107,18 @@ inline LSystemGrammar contextSensitive2LPlant() {
 // Step 4: next level flowers — propagation goes bottom to top
 inline LSystemGrammar contextSensitiveFlower() {
   LSystemGrammar g;
-  g.angle = 25.f;
-  g.axiom = {Symbol('A')};
+
+  g.axiom = w("A");
+  g.ignore = "+-|";
+  g.push = '[';
+  g.pop = ']';
   g.rules = {
-      ruleFor('a').withLeftContext('F').to("K"),       // F < a → K  (MUST be before default 'a')
-      ruleFor('a').withLeftContext('i').to("a"),       // i < a → a  (MUST be before default 'a')
-      ruleFor('a').to("a"),                            // a → a  (default: stay dormant)
-      ruleFor('A').to("i[+a][-a]A"),                  // active apex grows
-      ruleFor('i').to("F"),                            // immature matures
-      ruleFor('F').to("FF"),                           // mature elongates
+      ruleFor('a').withLeftContext('F').to("K"),  // F < a → K  (MUST be before default 'a')
+      ruleFor('a').withLeftContext('i').to("a"),  // i < a → a  (MUST be before default 'a')
+      ruleFor('a').to("a"),                       // a → a  (default: stay dormant)
+      ruleFor('A').to("i[+a][-a]A"),              // active apex grows
+      ruleFor('i').to("F"),                       // immature matures
+      ruleFor('F').to("FF"),                      // mature elongates
   };
   return g;
 }

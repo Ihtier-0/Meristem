@@ -28,13 +28,8 @@ struct RuleBuilder {
   Rule m_rule;
 
   RuleBuilder& to(std::string_view succ) {
-    std::string s(succ);
-    m_rule.successor = [s](std::span<const ParamValue>) -> Word {
-      Word w;
-      w.reserve(s.size());
-      for (char c : s) w.emplace_back(c);
-      return w;
-    };
+    Word word = w(succ);
+    m_rule.successor = [word = std::move(word)](std::span<const ParamValue>) -> Word { return word; };
     return *this;
   }
   RuleBuilder& withProbability(float p)  { m_rule.probability = p;  return *this; }

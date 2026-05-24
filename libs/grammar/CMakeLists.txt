@@ -9,7 +9,7 @@ set(_sources
 add_library(grammar STATIC ${_headers} ${_sources})
 target_include_directories(grammar PUBLIC include)
 target_link_libraries(grammar PUBLIC core)
-target_link_libraries(grammar PRIVATE doctest::doctest)
+target_link_libraries(grammar PRIVATE doctest::doctest spdlog::spdlog)
 target_compile_definitions(grammar PRIVATE DOCTEST_CONFIG_DISABLE)
 set_target_properties(grammar PROPERTIES FOLDER "Meristem")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${_headers} ${_sources})

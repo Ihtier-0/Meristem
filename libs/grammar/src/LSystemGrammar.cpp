@@ -1,37 +1,140 @@
 #include "grammar/LSystemGrammar.h"
 
+#include <cassert>
+#include <map>
+#include <tuple>
+
+#include <spdlog/spdlog.h>
+
 namespace D {
 
-// Bracket-aware left context: skip +/-/| and [...] groups going backwards.
-// In  F[+A][-A]  the biological parent of each A is F, not '+' or '-'.
-static char leftBioContext(const Word& w, size_t i) {
-  int j = static_cast<int>(i) - 1;
-  while (j >= 0) {
-    char c = w[static_cast<size_t>(j)].letter;
-    if (c == '+' || c == '-' || c == '|') {
-      --j;
-    } else if (c == ']') {
-      // skip the entire matching [...] group
+namespace {
+
+// Left context in Biological mode.
+//
+// Scan leftward from position i, applying three rules:
+//   1. ignore chars    — skip over them linearly.
+//   2. pop  (']')      — a sibling branch is to the left; skip the entire
+//                        matched [...] block and continue on the parent axis.
+//   3. push ('[')      — we just crossed the opening of our own branch;
+//                        the parent symbol is to the left, so keep going.
+//   4. anything else   — return it as the left context.
+char leftCtx(const Word& w, size_t i, std::string_view ignore, std::optional<char> push,
+             std::optional<char> pop) {
+  size_t j = i;
+  while (j > 0) {
+    char c = w[--j].letter;
+    if (ignore.find(c) != std::string_view::npos) continue;
+    if (pop && c == *pop) {
+      // skip the sibling branch to the left
       int depth = 1;
-      --j;
-      while (j >= 0 && depth > 0) {
-        char cc = w[static_cast<size_t>(j)].letter;
-        if (cc == ']')
-          ++depth;
-        else if (cc == '[')
-          --depth;
-        --j;
+      while (j > 0 && depth > 0) {
+        char b = w[--j].letter;
+        if (pop && b == *pop) ++depth;
+        if (push && b == *push) --depth;
       }
-    } else if (c == '[') {
-      --j;  // branch open: step past it to the parent symbol
-    } else {
-      return c;
+      continue;
     }
+    if (push && c == *push) continue;  // crossed our own branch-open
+    return c;
   }
   return '\0';
 }
 
+// Right context in Biological mode.
+//
+// Scan rightward from position i, applying three rules:
+//   1. ignore chars    — skip over them linearly.
+//   2. push ('[')      — a sub-branch starts; skip the entire [...] block,
+//                        then continue on the same axis.
+//   3. pop  (']')      — end of our branch.
+//                        includeSiblings=false → no right context (stop).
+//                        includeSiblings=true  → cross the boundary, continue
+//                        on the parent axis (Houdini "Context Includes Siblings").
+//   4. anything else   — return it as the right context.
+char rightCtx(const Word& w, size_t i, std::string_view ignore, std::optional<char> push,
+              std::optional<char> pop, bool includeSiblings) {
+  size_t j = i + 1;
+  while (j < w.size()) {
+    char c = w[j].letter;
+    if (ignore.find(c) != std::string_view::npos) {
+      ++j;
+      continue;
+    }
+    if (push && c == *push) {
+      // skip the sub-branch
+      int depth = 1;
+      ++j;
+      while (j < w.size() && depth > 0) {
+        char b = w[j].letter;
+        if (push && b == *push) ++depth;
+        if (pop && b == *pop) --depth;
+        ++j;
+      }
+      continue;
+    }
+    if (pop && c == *pop) {
+      if (!includeSiblings) return '\0';
+      ++j;
+      continue;  // cross the branch boundary, continue on parent axis
+    }
+    return c;
+  }
+  return '\0';
+}
+
+}  // namespace
+
+// ── Grammar methods ───────────────────────────────────────────────────────────
+
+bool LSystemGrammar::valid() const {
+  if (contextMode == ContextMode::Strict) return true;
+  for (const Rule& r : rules) {
+    auto bad = [&](char c) {
+      return ignore.find(c) != std::string::npos || (push && c == *push) || (pop && c == *pop);
+    };
+    if (r.leftContext && bad(*r.leftContext)) return false;
+    if (r.rightContext && bad(*r.rightContext)) return false;
+  }
+
+  for (size_t i = 0; i < rules.size(); ++i) {
+    for (size_t k = i + 1; k < rules.size(); ++k) {
+      if (rules[i].predecessor == rules[k].predecessor &&
+          rules[i].leftContext == rules[k].leftContext &&
+          rules[i].rightContext == rules[k].rightContext && !rules[i].condition &&
+          !rules[k].condition && fuzzyEqual(rules[i].probability, 1.f) &&
+          fuzzyEqual(rules[k].probability, 1.f))
+        spdlog::warn("LSystemGrammar: rule '{}' is shadowed by an earlier rule",
+                     rules[k].predecessor);
+    }
+  }
+
+  // Check that probabilities sum to 1 for stochastic groups.
+  // Only rules with p < 1 are stochastic; rules with p == 1 are deterministic
+  // and are already covered by the shadowed-rule check above.
+  // Conditional rules are skipped — their guards may exclude some alternatives at runtime.
+  using GroupKey = std::tuple<char, std::optional<char>, std::optional<char>>;
+  std::map<GroupKey, float> probSums;
+  for (const Rule& r : rules) {
+    if (r.condition) continue;
+    if (fuzzyEqual(r.probability, 1.f)) continue;  // deterministic — not stochastic
+    probSums[{r.predecessor, r.leftContext, r.rightContext}] += r.probability;
+  }
+  for (const auto& [key, sum] : probSums) {
+    if (!fuzzyEqual(sum, 1.f)) {
+      spdlog::warn(
+          "LSystemGrammar: rules for '{}' have probabilities summing to {:.4f} (expected 1.0)",
+          std::get<0>(key), sum);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Word LSystemGrammar::derive(const Word& current) const {
+  assert(valid());
+
   Word result;
   result.reserve(current.size() * 2);
 
@@ -42,10 +145,18 @@ Word LSystemGrammar::derive(const Word& current) const {
     for (const Rule& rule : rules) {
       if (rule.predecessor != sym.letter) continue;
 
-      if (rule.leftContext && leftBioContext(current, i) != *rule.leftContext) continue;
-      if (rule.rightContext &&
-          (i + 1 >= current.size() || current[i + 1].letter != *rule.rightContext))
-        continue;
+      if (rule.leftContext) {
+        char lc = (contextMode == ContextMode::Biological) ? leftCtx(current, i, ignore, push, pop)
+                                                           : (i > 0 ? current[i - 1].letter : '\0');
+        if (lc != *rule.leftContext) continue;
+      }
+
+      if (rule.rightContext) {
+        char rc = (contextMode == ContextMode::Biological)
+                      ? rightCtx(current, i, ignore, push, pop, includeSiblings)
+                      : (i + 1 < current.size() ? current[i + 1].letter : '\0');
+        if (rc != *rule.rightContext) continue;
+      }
 
       if (rule.condition && !rule.condition(sym.params)) continue;
 
@@ -62,6 +173,8 @@ Word LSystemGrammar::derive(const Word& current) const {
 }
 
 Word LSystemGrammar::derive(const Word& current, std::mt19937& rng) const {
+  assert(valid());
+
   Word result;
   result.reserve(current.size() * 2);
 
@@ -72,10 +185,20 @@ Word LSystemGrammar::derive(const Word& current, std::mt19937& rng) const {
     std::vector<const Rule*> candidates;
     for (const Rule& rule : rules) {
       if (rule.predecessor != sym.letter) continue;
-      if (rule.leftContext && leftBioContext(current, i) != *rule.leftContext) continue;
-      if (rule.rightContext &&
-          (i + 1 >= current.size() || current[i + 1].letter != *rule.rightContext))
-        continue;
+
+      if (rule.leftContext) {
+        char lc = (contextMode == ContextMode::Biological) ? leftCtx(current, i, ignore, push, pop)
+                                                           : (i > 0 ? current[i - 1].letter : '\0');
+        if (lc != *rule.leftContext) continue;
+      }
+
+      if (rule.rightContext) {
+        char rc = (contextMode == ContextMode::Biological)
+                      ? rightCtx(current, i, ignore, push, pop, includeSiblings)
+                      : (i + 1 < current.size() ? current[i + 1].letter : '\0');
+        if (rc != *rule.rightContext) continue;
+      }
+
       if (rule.condition && !rule.condition(sym.params)) continue;
       candidates.push_back(&rule);
     }
@@ -111,184 +234,402 @@ Word LSystemGrammar::derive(const Word& current, std::mt19937& rng) const {
 }  // namespace D
 
 // ── Unit tests ────────────────────────────────────────────────────────────────
-// Compiled into grammar_tests (DOCTEST_CONFIG_DISABLE is set for the grammar library target).
+// Compiled into apps/tests (DOCTEST_CONFIG_DISABLE is set for the grammar library target).
 
 #include <doctest/doctest.h>
 
-namespace {
+TEST_SUITE("LSystemGrammar/D0L") {
+  TEST_CASE("Lindenmayer algae  A→AB, B→A") {
+    // L-system:
+    //   Alphabet: {A, B}
+    //   Axiom:    A
+    //   Rules:    A → AB
+    //             B → A
+    // Derivation: A → AB → ABA → ABAAB → ABAABABA
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {D::ruleFor('A').to("AB"), D::ruleFor('B').to("A")};
 
-// Build a Word from a plain string (letters only, no params).
-D::Word w(std::string_view s) {
-  D::Word word;
-  word.reserve(s.size());
-  for (char c : s) word.emplace_back(c);
-  return word;
-}
-
-// Extract just the letters of a Word as a std::string.
-std::string str(const D::Word& word) {
-  std::string s;
-  s.reserve(word.size());
-  for (const auto& sym : word) s += sym.letter;
-  return s;
-}
-
-}  // namespace
-
-using D::ruleFor;
-
-// ── D0L deterministic derive ──────────────────────────────────────────────────
-
-TEST_CASE("D0L: Lindenmayer algae  A→AB B→A") {
-  // Classic example: A AB ABA ABAAB ABAABABA …
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("AB"), ruleFor('B').to("A")};
-
-  D::Word cur = g.axiom;
-  cur = g.derive(cur);
-  CHECK(str(cur) == "AB");
-  cur = g.derive(cur);
-  CHECK(str(cur) == "ABA");
-  cur = g.derive(cur);
-  CHECK(str(cur) == "ABAAB");
-  cur = g.derive(cur);
-  CHECK(str(cur) == "ABAABABA");
-}
-
-TEST_CASE("D0L: symbol with no matching rule stays unchanged") {
-  D::LSystemGrammar g;
-  g.axiom = w("FAG");
-  g.rules = {ruleFor('A').to("B")};  // F and G have no rules
-
-  CHECK(str(g.derive(g.axiom)) == "FBG");
-}
-
-TEST_CASE("D0L: first matching rule wins, others ignored") {
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("B"), ruleFor('A').to("C")};  // second must never fire
-
-  CHECK(str(g.derive(g.axiom)) == "B");
-}
-
-TEST_CASE("D0L: empty axiom derives to empty") {
-  D::LSystemGrammar g;
-  g.axiom = {};
-  g.rules = {ruleFor('A').to("B")};
-
-  CHECK(g.derive(g.axiom).empty());
-}
-
-// ── Context-sensitive rules ───────────────────────────────────────────────────
-
-TEST_CASE("D0L: left context (bracket-aware)  F<A→B") {
-  // Axiom  F[+A][-A]
-  // Both A's have F as their biological left context (brackets/+/- are skipped).
-  D::LSystemGrammar g;
-  g.axiom = w("F[+A][-A]");
-  g.rules = {ruleFor('A').withLeftContext('F').to("B"), ruleFor('A').to("A")};  // default: stays A
-
-  CHECK(str(g.derive(g.axiom)) == "F[+B][-B]");
-}
-
-TEST_CASE("D0L: left context mismatch → default rule fires") {
-  // Axiom  G[+A]  — left context of A is G, not F → context rule skipped
-  D::LSystemGrammar g;
-  g.axiom = w("G[+A]");
-  g.rules = {ruleFor('A').withLeftContext('F').to("B"), ruleFor('A').to("X")};  // default
-
-  CHECK(str(g.derive(g.axiom)) == "G[+X]");
-}
-
-TEST_CASE("D0L: right context  A>F→B") {
-  D::LSystemGrammar g;
-  g.axiom = w("AF");
-  g.rules = {ruleFor('A').withRightContext('F').to("B"), ruleFor('A').to("A")};  // default
-
-  CHECK(str(g.derive(g.axiom)) == "BF");
-}
-
-TEST_CASE("D0L: right context at end of string → default rule fires") {
-  D::LSystemGrammar g;
-  g.axiom = w("A");  // nothing to the right
-  g.rules = {ruleFor('A').withRightContext('F').to("B"), ruleFor('A').to("X")};
-
-  CHECK(str(g.derive(g.axiom)) == "X");
-}
-
-// ── Stochastic derive ─────────────────────────────────────────────────────────
-
-TEST_CASE("Stochastic: single rule always fires regardless of RNG") {
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("B").withProbability(1.f)};
-
-  std::mt19937 rng(0);
-  for (int i = 0; i < 20; ++i) CHECK(str(g.derive(g.axiom, rng)) == "B");
-}
-
-TEST_CASE("Stochastic: same seed produces same output") {
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("B").withProbability(0.5f),
-             ruleFor('A').to("C").withProbability(0.5f)};
-
-  auto run = [&](uint32_t seed) {
-    std::mt19937 rng(seed);
     D::Word cur = g.axiom;
-    for (int i = 0; i < 10; ++i) cur = g.derive(cur, rng);
-    return str(cur);
-  };
-
-  CHECK(run(42) == run(42));
-  CHECK(run(123) == run(123));
-}
-
-TEST_CASE("Stochastic: different seeds may produce different outputs") {
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("B").withProbability(0.5f),
-             ruleFor('A').to("C").withProbability(0.5f)};
-
-  auto run = [&](uint32_t seed) {
-    std::mt19937 rng(seed);
-    D::Word cur = g.axiom;
-    for (int i = 0; i < 8; ++i) cur = g.derive(cur, rng);
-    return str(cur);
-  };
-
-  // With 2^8 possible sequences it is extremely unlikely all seeds agree.
-  bool anyDiffer = false;
-  for (uint32_t s = 1; s < 20 && !anyDiffer; ++s)
-    if (run(s) != run(0)) anyDiffer = true;
-  CHECK(anyDiffer);
-}
-
-TEST_CASE("Stochastic: probability distribution (statistical)") {
-  // A→B (p=0.8), A→C (p=0.2)  — over 2000 trials expect ~80% B
-  D::LSystemGrammar g;
-  g.axiom = w("A");
-  g.rules = {ruleFor('A').to("B").withProbability(0.8f),
-             ruleFor('A').to("C").withProbability(0.2f)};
-
-  std::mt19937 rng(0);
-  int countB = 0;
-  constexpr int N = 2000;
-  for (int i = 0; i < N; ++i) {
-    D::Word out = g.derive(g.axiom, rng);
-    if (!out.empty() && out[0].letter == 'B') ++countB;
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "AB");
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "ABA");
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "ABAAB");
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "ABAABABA");
   }
-  // σ ≈ sqrt(2000 * 0.8 * 0.2) ≈ 17.9; allow ±5σ
-  CHECK(countB > 1510);
-  CHECK(countB < 1690);
-}
 
-TEST_CASE("Stochastic: no matching rule → symbol passes through") {
-  D::LSystemGrammar g;
-  g.axiom = w("XAY");
-  g.rules = {ruleFor('A').to("B").withProbability(1.f)};  // X and Y have no rules
+  TEST_CASE("symbol with no matching rule stays unchanged") {
+    // Axiom: FAG
+    // Rules: A → B   (F and G have no rule → pass through)
+    // Step 1: FAG → FBG
+    D::LSystemGrammar g;
+    g.axiom = D::w("FAG");
+    g.rules = {D::ruleFor('A').to("B")};
+    CHECK(D::str(g.derive(g.axiom)) == "FBG");
+  }
 
-  std::mt19937 rng(0);
-  CHECK(str(g.derive(g.axiom, rng)) == "XBY");
-}
+  TEST_CASE("first matching rule wins, others ignored") {
+    // Axiom: A
+    // Rules: A → B   (matched first)
+    //        A → C   (never reached)
+    // Step 1: A → B
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {D::ruleFor('A').to("B"), D::ruleFor('A').to("C")};
+    CHECK(D::str(g.derive(g.axiom)) == "B");
+  }
+
+  TEST_CASE("empty axiom derives to empty") {
+    // Axiom: (empty)
+    // Rules: A → B
+    // Step 1: (empty) → (empty)
+    D::LSystemGrammar g;
+    g.rules = {D::ruleFor('A').to("B")};
+    CHECK(g.derive(g.axiom).empty());
+  }
+
+  TEST_CASE("no rules — all symbols pass through unchanged") {
+    // Axiom: ABC
+    // Rules: (none — identity derivation)
+    // Step 1: ABC → ABC
+    D::LSystemGrammar g;
+    g.axiom = D::w("ABC");
+    CHECK(D::str(g.derive(g.axiom)) == "ABC");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/D0L")
+
+TEST_SUITE("LSystemGrammar/Biological left context") {
+  TEST_CASE("F<A→B: ignore symbols and branch-open skipped") {
+    // Axiom: F[+A][-A], ignore="+-", push='[', pop=']'
+    // Rules: F < A → B
+    //        A → A   (default)
+    // Left of first A:  skip '+', skip '[' (branch-open) → F → rule fires.
+    // Left of second A: skip '-', skip '[' (branch-open),
+    //                   skip [+A] sibling branch → F → rule fires.
+    // Step 1: F[+A][-A] → F[+B][-B]
+    D::LSystemGrammar g;
+    g.ignore = "+-";
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("F[+A][-A]");
+    g.rules = {D::ruleFor('A').withLeftContext('F').to("B"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "F[+B][-B]");
+  }
+
+  TEST_CASE("mismatch → default rule fires") {
+    // Axiom: G[+A], ignore="+-"
+    // Rules: F < A → B   (left context is G, not F → mismatch)
+    //        A → X       (default fires)
+    // Step 1: G[+A] → G[+X]
+    D::LSystemGrammar g;
+    g.ignore = "+-";
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("G[+A]");
+    g.rules = {D::ruleFor('A').withLeftContext('F').to("B"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(g.axiom)) == "G[+X]");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Biological left context")
+
+TEST_SUITE("LSystemGrammar/Biological right context") {
+  TEST_CASE("A>F→B: direct neighbour") {
+    // Axiom: AF
+    // Rules: A > F → B   (F is the immediate right neighbour)
+    // Step 1: AF → BF
+    D::LSystemGrammar g;
+    g.axiom = D::w("AF");
+    g.rules = {D::ruleFor('A').withRightContext('F').to("B"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "BF");
+  }
+
+  TEST_CASE("A>F→B: ignore symbol skipped") {
+    // Axiom: A+F, ignore="+"
+    // Rules: A > F → B   ('+' is skipped, right context is F)
+    // Step 1: A+F → B+F
+    D::LSystemGrammar g;
+    g.ignore = "+";
+    g.axiom = D::w("A+F");
+    g.rules = {D::ruleFor('A').withRightContext('F').to("B"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "B+F");
+  }
+
+  TEST_CASE("A>C→X: sub-branch skipped, C on main axis reachable") {
+    // Axiom: A[B]C, push='[', pop=']'
+    // Rules: A > C → X   ([B] is a sub-branch and is skipped; right context of A is C)
+    // Step 1: A[B]C → X[B]C
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("A[B]C");
+    g.rules = {D::ruleFor('A').withRightContext('C').to("X"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "X[B]C");
+  }
+
+  TEST_CASE("end of branch → no right context, default fires") {
+    // Axiom: F[A]B, push='[', pop=']'
+    // Rules: A > B → X   (A is inside a branch; ']' ends the branch → no right context)
+    //        A → A       (default fires)
+    // Step 1: F[A]B → F[A]B
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("F[A]B");
+    g.rules = {D::ruleFor('A').withRightContext('B').to("X"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "F[A]B");
+  }
+
+  TEST_CASE("end of string → no right context, default fires") {
+    // Axiom: A
+    // Rules: A > F → B   (A is at end of string → no right context)
+    //        A → X       (default fires)
+    // Step 1: A → X
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {D::ruleFor('A').withRightContext('F').to("B"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(g.axiom)) == "X");
+  }
+
+  // includeSiblings (Houdini "Context Includes Siblings"):
+  // false → right-context search stops at ']' (default).
+  // true  → ']' is crossed; search continues on the parent axis.
+  TEST_CASE("includeSiblings=false (default): ']' stops right-context search") {
+    // Axiom: [A]Q[B], push='[', pop=']'
+    // Rules: A > Q → X   (A is inside a branch; without includeSiblings it cannot see Q)
+    //        A → A       (default fires)
+    // Step 1: [A]Q[B] → [A]Q[B]
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("[A]Q[B]");
+    g.rules = {D::ruleFor('A').withRightContext('Q').to("X"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "[A]Q[B]");
+  }
+
+  TEST_CASE("includeSiblings=true: right-context crosses branch boundary") {
+    // Axiom: [A]Q[B], push='[', pop=']', includeSiblings=true
+    // Rules: A > Q → X   (']' is crossed; Q is the right context of A → rule fires)
+    // Step 1: [A]Q[B] → [X]Q[B]
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.pop = ']';
+    g.includeSiblings = true;
+    g.axiom = D::w("[A]Q[B]");
+    g.rules = {D::ruleFor('A').withRightContext('Q').to("X"), D::ruleFor('A').to("A")};
+    CHECK(D::str(g.derive(g.axiom)) == "[X]Q[B]");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Biological right context")
+
+TEST_SUITE("LSystemGrammar/Strict mode") {
+  TEST_CASE("'[' is matchable as left context") {
+    // Axiom: [A
+    // Rules: [ < A → B   (Strict: '[' is a plain char, matched as left context)
+    //        A → X       (default)
+    // Step 1: [A → [B
+    D::LSystemGrammar g;
+    g.contextMode = D::ContextMode::Strict;
+    g.axiom = D::w("[A");
+    g.rules = {D::ruleFor('A').withLeftContext('[').to("B"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(g.axiom)) == "[B");
+  }
+
+  TEST_CASE("']' is matchable as right context") {
+    // Axiom: A]
+    // Rules: A > ] → B   (Strict: ']' is a plain char, matched as right context)
+    //        A → X       (default)
+    // Step 1: A] → B]
+    D::LSystemGrammar g;
+    g.contextMode = D::ContextMode::Strict;
+    g.axiom = D::w("A]");
+    g.rules = {D::ruleFor('A').withRightContext(']').to("B"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(g.axiom)) == "B]");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Strict mode")
+
+TEST_SUITE("LSystemGrammar/valid()") {
+  TEST_CASE("no ignore, no push/pop — any context char is valid") {
+    // '+' and 'F' are not in ignore and not push/pop → valid context chars.
+    D::LSystemGrammar g;
+    g.rules = {
+        D::ruleFor('A').withLeftContext('F').to("B"),
+        D::ruleFor('A').withRightContext('+').to("C"),
+    };
+    CHECK(g.valid());
+  }
+
+  TEST_CASE("context char in ignore → invalid") {
+    // '+' is in ignore → cannot be a context char in Biological mode.
+    D::LSystemGrammar g;
+    g.ignore = "+-|";
+    g.rules = {D::ruleFor('A').withLeftContext('+').to("B")};
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("context char is push → invalid") {
+    // '[' is the push symbol → cannot be a context char in Biological mode.
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.rules = {D::ruleFor('A').withLeftContext('[').to("B")};
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("context char is pop → invalid") {
+    // ']' is the pop symbol → cannot be a context char in Biological mode.
+    D::LSystemGrammar g;
+    g.pop = ']';
+    g.rules = {D::ruleFor('A').withRightContext(']').to("B")};
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("context char not in ignore, not push/pop → valid") {
+    // 'F' is not in ignore and not push/pop → valid.
+    D::LSystemGrammar g;
+    g.ignore = "+-|";
+    g.push = '[';
+    g.pop = ']';
+    g.rules = {D::ruleFor('A').withLeftContext('F').to("B")};
+    CHECK(g.valid());
+  }
+
+  TEST_CASE("Strict — bracket as context char is valid") {
+    // In Strict mode push/pop have no structural role → '[' is a valid context char.
+    D::LSystemGrammar g;
+    g.push = '[';
+    g.contextMode = D::ContextMode::Strict;
+    g.rules = {D::ruleFor('A').withLeftContext('[').to("B")};
+    CHECK(g.valid());
+  }
+
+  TEST_CASE("probabilities sum to 1 → valid") {
+    // 0.6 + 0.4 = 1.0 exactly → no warning, valid.
+    D::LSystemGrammar g;
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.6f),
+        D::ruleFor('A').to("C").withProbability(0.4f),
+    };
+    CHECK(g.valid());
+  }
+
+  TEST_CASE("probabilities do not sum to 1 → invalid") {
+    // 0.6 + 0.3 = 0.9 ≠ 1.0 → invalid.
+    D::LSystemGrammar g;
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.6f),
+        D::ruleFor('A').to("C").withProbability(0.3f),
+    };
+    CHECK_FALSE(g.valid());
+  }
+
+  TEST_CASE("single rule with p=1 → valid") {
+    // One rule, p=1.0 → sum is exactly 1.0 → valid.
+    D::LSystemGrammar g;
+    g.rules = {D::ruleFor('A').to("B").withProbability(1.f)};
+    CHECK(g.valid());
+  }
+
+}  // TEST_SUITE("LSystemGrammar/valid()")
+
+TEST_SUITE("LSystemGrammar/Stochastic") {
+  TEST_CASE("single rule always fires regardless of RNG") {
+    // Axiom: A
+    // Rules: A → B  (p=1.0)
+    // With p=1.0 there is only one candidate; RNG has no effect.
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {D::ruleFor('A').to("B").withProbability(1.f)};
+    std::mt19937 rng(0);
+    for (int i = 0; i < 20; ++i) CHECK(D::str(g.derive(g.axiom, rng)) == "B");
+  }
+
+  TEST_CASE("same seed produces same output") {
+    // Axiom: A
+    // Rules: A → B  (p=0.5)
+    //        A → C  (p=0.5)
+    // Stochastic derive is deterministic given the same seed.
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.5f),
+        D::ruleFor('A').to("C").withProbability(0.5f),
+    };
+    auto run = [&](uint32_t seed) {
+      std::mt19937 rng(seed);
+      D::Word cur = g.axiom;
+      for (int i = 0; i < 10; ++i) cur = g.derive(cur, rng);
+      return D::str(cur);
+    };
+    CHECK(run(42) == run(42));
+    CHECK(run(123) == run(123));
+  }
+
+  TEST_CASE("different seeds may produce different outputs") {
+    // Axiom: A
+    // Rules: A → B  (p=0.5)
+    //        A → C  (p=0.5)
+    // Verifies the RNG is actually used: if it were ignored, every seed would
+    // produce the same string.  After 8 steps the word has 256 symbols;
+    // at least one of 20 seeds must differ from seed 0.
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.5f),
+        D::ruleFor('A').to("C").withProbability(0.5f),
+    };
+    auto run = [&](uint32_t seed) {
+      std::mt19937 rng(seed);
+      D::Word cur = g.axiom;
+      for (int i = 0; i < 8; ++i) cur = g.derive(cur, rng);
+      return D::str(cur);
+    };
+    std::string baseline = run(0);
+    bool anyDiffer = false;
+    for (uint32_t s = 1; s < 20 && !anyDiffer; ++s)
+      if (run(s) != baseline) anyDiffer = true;
+    CHECK(anyDiffer);
+  }
+
+  TEST_CASE("probability distribution (statistical)") {
+    // Axiom: A
+    // Rules: A → B  (p=0.8)
+    //        A → C  (p=0.2)
+    // Verifies probability weights are applied: p=0.8 must produce ~80% B,
+    // not 50% (equal weights) or 100% (first rule always wins).
+    //   n=2000, p=0.8, q=0.2
+    //   E = n·p          = 2000·0.8        = 1600
+    //   σ = √(n·p·q)     = √(2000·0.8·0.2) = √320 ≈ 17.9
+    //   bounds: E ± 5σ   ≈ 1600 ± 90      → [1510, 1690]
+    // False-positive probability at ±5σ: < 0.0001%
+    D::LSystemGrammar g;
+    g.axiom = D::w("A");
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.8f),
+        D::ruleFor('A').to("C").withProbability(0.2f),
+    };
+    std::mt19937 rng(0);
+    int countB = 0;
+    for (int i = 0; i < 2000; ++i) {
+      D::Word out = g.derive(g.axiom, rng);
+      if (!out.empty() && out[0].letter == 'B') ++countB;
+    }
+    CHECK(countB > 1510);  // E - 5σ
+    CHECK(countB < 1690);  // E + 5σ
+  }
+
+  TEST_CASE("no matching rule → symbol passes through") {
+    // Axiom: XAY
+    // Rules: A → B  (p=1.0)   (X and Y have no rule → pass through)
+    // Step 1: XAY → XBY
+    D::LSystemGrammar g;
+    g.axiom = D::w("XAY");
+    g.rules = {D::ruleFor('A').to("B").withProbability(1.f)};
+    std::mt19937 rng(0);
+    CHECK(D::str(g.derive(g.axiom, rng)) == "XBY");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Stochastic")

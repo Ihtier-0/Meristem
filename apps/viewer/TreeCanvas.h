@@ -53,14 +53,22 @@ class TreeCanvas final : public QOpenGLWidget {
     float value = 0.f;
   };
 
+  struct ContextEdit {
+    char ignore[32]{};    // symbols skipped during context search (e.g. "+-|")
+    char push[2]{};       // branch-open symbol (single char or empty)
+    char pop[2]{};        // branch-close symbol (single char or empty)
+    bool includeSiblings = false;
+    bool strictMode = false;
+  };
+
   explicit TreeCanvas(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
   // State accessors — ControlPanel reads these at startup
   AlgoType algoType() const { return m_algoType; }
   int generation() const;
   int symbolCount() const;
-  double angle() const { return static_cast<double>(m_grammar.angle); }
-  double stepLen() const { return static_cast<double>(m_grammar.stepLen); }
+  double angle() const { return static_cast<double>(m_angle); }
+  double stepLen() const { return static_cast<double>(m_stepLen); }
   double zoom() const { return m_zoom; }
   double panX() const { return m_panX; }
   double panY() const { return m_panY; }
@@ -76,6 +84,7 @@ class TreeCanvas final : public QOpenGLWidget {
   const std::vector<RuleEdit>& ruleEdits() const { return m_ruleEdits; }
   const std::vector<ParametricEdit>& paramRuleEdits() const { return m_paramRuleEdits; }
   const std::vector<ParamDef>& paramDefs() const { return m_paramDefs; }
+  ContextEdit contextEdit() const;
 
  public slots:
   void stepGeneration();
@@ -95,7 +104,8 @@ class TreeCanvas final : public QOpenGLWidget {
   void setFlowerRadius(double r);
   void setSymbols(TurtleSymbols s);
 
-  void applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules);
+  void applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules,
+                    const ContextEdit& ctx);
   void applyParametricGrammar(const std::string& axiom, const std::vector<ParametricEdit>& rules,
                               const std::vector<ParamDef>& params);
 
@@ -132,6 +142,9 @@ class TreeCanvas final : public QOpenGLWidget {
   TurtleBuilder2D m_turtle;
   Mesh m_mesh;
   Mesh m_flowerMesh;
+
+  float m_angle   = 25.f;
+  float m_stepLen = 1.f;
 
   float m_zoom = 1.f;
   float m_panX = 0.f;

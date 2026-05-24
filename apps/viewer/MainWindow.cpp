@@ -109,7 +109,7 @@ void MainWindow::refreshStatus() {
   m_statusLabel->setText(QString("Gen: %1   |   Symbols: %2   |   Zoom: %3×")
                              .arg(m_canvas->generation())
                              .arg(m_canvas->symbolCount())
-                             .arg(m_canvas->zoom(), 0, 'f', 2));
+                             .arg(m_canvas->zoom(), 0, 'f', 3));
 }
 
 }  // namespace D

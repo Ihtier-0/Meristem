@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <numbers>
 
 namespace D {
@@ -56,6 +57,14 @@ inline const float* value_ptr(const Vec3& v) noexcept { return &v.x; }
 inline const float* value_ptr(const Vec2& v) noexcept { return &v.x; }
 
 // ── Scalar functions ──────────────────────────────────────────────────────────
+
+// Returns true if |a - b| ≤ eps.
+// Uses an absolute epsilon — suitable for values of known magnitude
+// (e.g. probabilities in [0, 1]).  Modelled after Qt's qFuzzyCompare,
+// but absolute rather than relative.
+inline bool fuzzyEqual(float a, float b, float eps = 1e-5f) noexcept {
+  return std::abs(a - b) <= eps;
+}
 
 inline float radians(float deg) noexcept {
   return deg * std::numbers::pi_v<float> / 180.f;

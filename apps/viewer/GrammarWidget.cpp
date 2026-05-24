@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -37,6 +38,49 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   m_rulesLayout->setContentsMargins(0, 0, 0, 0);
   m_rulesLayout->setSpacing(2);
   nLay->addWidget(m_rulesWidget);
+
+  // ── Context settings (shown only for context-sensitive algos) ─────────────────
+
+  m_contextWidget = new QWidget;
+  auto* ctxLay = new QVBoxLayout(m_contextWidget);
+  ctxLay->setContentsMargins(0, 4, 0, 0);
+  ctxLay->setSpacing(2);
+
+  auto* ctxRow1 = new QWidget;
+  auto* cr1 = new QHBoxLayout(ctxRow1);
+  cr1->setContentsMargins(0, 0, 0, 0);
+  cr1->addWidget(new QLabel("Ignore:"));
+  m_ignoreEdit = new QLineEdit;
+  m_ignoreEdit->setPlaceholderText("e.g. +-|");
+  cr1->addWidget(m_ignoreEdit);
+  ctxLay->addWidget(ctxRow1);
+
+  auto* ctxRow2 = new QWidget;
+  auto* cr2 = new QHBoxLayout(ctxRow2);
+  cr2->setContentsMargins(0, 0, 0, 0);
+  cr2->setSpacing(4);
+  cr2->addWidget(new QLabel("Push:"));
+  m_pushEdit = new QLineEdit;
+  m_pushEdit->setMaxLength(1);
+  m_pushEdit->setFixedWidth(24);
+  cr2->addWidget(m_pushEdit);
+  cr2->addWidget(new QLabel("Pop:"));
+  m_popEdit = new QLineEdit;
+  m_popEdit->setMaxLength(1);
+  m_popEdit->setFixedWidth(24);
+  cr2->addWidget(m_popEdit);
+  m_includeSiblingsCheck = new QCheckBox("Siblings");
+  m_includeSiblingsCheck->setToolTip("Include siblings in right-context search");
+  cr2->addWidget(m_includeSiblingsCheck);
+  m_strictModeCheck = new QCheckBox("Strict");
+  m_strictModeCheck->setToolTip("Match literal neighbours (ignore, push, pop not applied)");
+  cr2->addWidget(m_strictModeCheck);
+  cr2->addStretch();
+  ctxLay->addWidget(ctxRow2);
+
+  nLay->addWidget(m_contextWidget);
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   auto* addRuleBtn = new QPushButton("+ Rule");
   auto* applyBtn = new QPushButton("Apply");
@@ -95,6 +139,19 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
 
   bool isParam = (canvas->algoType() == TreeCanvas::AlgoType::Parametric);
   m_grammarStack->setCurrentIndex(isParam ? 1 : 0);
+
+  bool isContext = (canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive ||
+                    canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive2L ||
+                    canvas->algoType() == TreeCanvas::AlgoType::ContextSensitiveFlower);
+  m_contextWidget->setVisible(isContext);
+  if (isContext) {
+    auto ce = canvas->contextEdit();
+    m_ignoreEdit->setText(ce.ignore);
+    m_pushEdit->setText(ce.push[0] ? QString(ce.push[0]) : "");
+    m_popEdit->setText(ce.pop[0] ? QString(ce.pop[0]) : "");
+    m_includeSiblingsCheck->setChecked(ce.includeSiblings);
+    m_strictModeCheck->setChecked(ce.strictMode);
+  }
 }
 
 // ── Slots ─────────────────────────────────────────────────────────────────────
@@ -102,6 +159,9 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
 void GrammarWidget::onAlgoSwitched(int typeInt) {
   auto type = static_cast<TreeCanvas::AlgoType>(typeInt);
   bool isParam = (type == TreeCanvas::AlgoType::Parametric);
+  bool isContext = (type == TreeCanvas::AlgoType::ContextSensitive ||
+                    type == TreeCanvas::AlgoType::ContextSensitive2L ||
+                    type == TreeCanvas::AlgoType::ContextSensitiveFlower);
 
   m_grammarStack->setCurrentIndex(isParam ? 1 : 0);
 
@@ -118,6 +178,16 @@ void GrammarWidget::onAlgoSwitched(int typeInt) {
       m_axiomEdit->setText(m_canvas->axiomBuf());
     }
     rebuildRuleRows();
+
+    m_contextWidget->setVisible(isContext);
+    if (isContext) {
+      auto ce = m_canvas->contextEdit();
+      m_ignoreEdit->setText(ce.ignore);
+      m_pushEdit->setText(ce.push[0] ? QString(ce.push[0]) : "");
+      m_popEdit->setText(ce.pop[0] ? QString(ce.pop[0]) : "");
+      m_includeSiblingsCheck->setChecked(ce.includeSiblings);
+      m_strictModeCheck->setChecked(ce.strictMode);
+    }
   }
 }
 
@@ -164,7 +234,20 @@ void GrammarWidget::onApplyClicked() {
       re.probability = static_cast<float>(row.prob->value());
       rules.push_back(re);
     }
-    m_canvas->applyGrammar(m_axiomEdit->text().toStdString(), rules);
+
+    TreeCanvas::ContextEdit ctx;
+    if (m_contextWidget->isVisible()) {
+      auto ign = m_ignoreEdit->text().toStdString();
+      auto ignLen = std::min(ign.size(), sizeof(ctx.ignore) - 1);
+      std::copy_n(ign.begin(), ignLen, ctx.ignore);
+      auto push = m_pushEdit->text().toStdString();
+      if (!push.empty()) ctx.push[0] = push[0];
+      auto pop = m_popEdit->text().toStdString();
+      if (!pop.empty()) ctx.pop[0] = pop[0];
+      ctx.includeSiblings = m_includeSiblingsCheck->isChecked();
+      ctx.strictMode = m_strictModeCheck->isChecked();
+    }
+    m_canvas->applyGrammar(m_axiomEdit->text().toStdString(), rules, ctx);
   }
 }
 

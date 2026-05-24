@@ -5,6 +5,7 @@
 
 #include "TreeCanvas.h"
 
+class QCheckBox;
 class QDoubleSpinBox;
 class QLineEdit;
 class QStackedWidget;
@@ -60,6 +61,15 @@ class GrammarWidget final : public QGroupBox {
   QLineEdit* m_axiomEdit = nullptr;
   QWidget* m_rulesWidget = nullptr;
   QVBoxLayout* m_rulesLayout = nullptr;
+
+  // Context settings (visible when algo type has context rules)
+  QWidget* m_contextWidget = nullptr;
+  QLineEdit* m_ignoreEdit = nullptr;
+  QLineEdit* m_pushEdit = nullptr;
+  QLineEdit* m_popEdit = nullptr;
+  QCheckBox* m_includeSiblingsCheck = nullptr;
+  QCheckBox* m_strictModeCheck = nullptr;
+
   QLineEdit* m_paramAxiomEdit = nullptr;
   QWidget* m_paramRulesWidget = nullptr;
   QVBoxLayout* m_paramRulesLayout = nullptr;

@@ -36,13 +36,6 @@ Vec4 toGlm(QColor c) {
           static_cast<float>(c.blueF()), 1.f};
 }
 
-std::string wordToString(const Word& word) {
-  std::string s;
-  s.reserve(word.size());
-  for (const auto& sym : word) s += sym.letter;
-  return s;
-}
-
 std::string wordToParametricString(const Word& word) {
   std::string s;
   for (const auto& sym : word) {
@@ -60,20 +53,13 @@ std::string wordToParametricString(const Word& word) {
   return s;
 }
 
-Word stringToWord(std::string_view s) {
-  Word w;
-  w.reserve(s.size());
-  for (char c : s) w.emplace_back(c);
-  return w;
-}
-
 TreeCanvas::RuleEdit ruleToEdit(const Rule& rule) {
   TreeCanvas::RuleEdit re;
   re.predecessor[0] = rule.predecessor;
   re.probability = rule.probability;
   if (rule.leftContext) re.leftContext[0] = *rule.leftContext;
   if (rule.rightContext) re.rightContext[0] = *rule.rightContext;
-  auto str = wordToString(rule.successor({}));
+  auto str = D::str(rule.successor({}));
   auto slen = std::min(str.size(), sizeof(re.successor) - 1);
   std::copy_n(str.begin(), slen, re.successor);
   return re;
@@ -97,15 +83,15 @@ TreeCanvas::TreeCanvas(QWidget* parent /* = nullptr */, Qt::WindowFlags f /* = Q
 void TreeCanvas::initLSystem() {
   m_grammar = examples::binaryTree();
   m_algoType = AlgoType::D0L;
-  m_turtle.setAngle(m_grammar.angle);
-  m_turtle.setStep(m_grammar.stepLen);
+  m_turtle.setAngle(m_angle);
+  m_turtle.setStep(m_stepLen);
   m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
   m_mesh = buildMesh(m_turtle, m_algo->getStructure());
   populateGrammarBuffers();
 }
 
 void TreeCanvas::populateGrammarBuffers() {
-  auto axiomStr = wordToString(m_grammar.axiom);
+  auto axiomStr = D::str(m_grammar.axiom);
   auto len = std::min(axiomStr.size(), sizeof(m_axiomBuf) - 1);
   std::fill(std::begin(m_axiomBuf), std::end(m_axiomBuf), '\0');
   std::copy_n(axiomStr.begin(), len, m_axiomBuf);
@@ -139,7 +125,7 @@ void TreeCanvas::paintGL() {
 
 void TreeCanvas::wheelEvent(QWheelEvent* e) {
   const float factor = e->angleDelta().y() > 0 ? 1.1f : (1.f / 1.1f);
-  m_zoom = std::clamp(m_zoom * factor, 0.05f, 50.f);
+  m_zoom = std::clamp(m_zoom * factor, 0.001f, 50.f);
   if (m_renderer) m_renderer->setZoom(m_zoom);
   emit viewChanged(m_zoom, m_panX, m_panY);
   update();
@@ -204,6 +190,17 @@ void TreeCanvas::keyPressEvent(QKeyEvent* e) {
 
 int TreeCanvas::generation() const { return m_algo ? m_algo->generation() : 0; }
 
+TreeCanvas::ContextEdit TreeCanvas::contextEdit() const {
+  ContextEdit ce;
+  auto ignLen = std::min(m_grammar.ignore.size(), sizeof(ce.ignore) - 1);
+  std::copy_n(m_grammar.ignore.begin(), ignLen, ce.ignore);
+  if (m_grammar.push) ce.push[0] = *m_grammar.push;
+  if (m_grammar.pop) ce.pop[0] = *m_grammar.pop;
+  ce.includeSiblings = m_grammar.includeSiblings;
+  ce.strictMode = (m_grammar.contextMode == ContextMode::Strict);
+  return ce;
+}
+
 int TreeCanvas::symbolCount() const {
   if (!m_algo) return 0;
   return static_cast<int>(std::get<StringStructure>(m_algo->getStructure()).derivation.size());
@@ -216,8 +213,8 @@ QColor TreeCanvas::bgColor() const { return toQColor(m_bgColor); }
 // ── Mesh rebuild ──────────────────────────────────────────────────────────────
 
 void TreeCanvas::rebuildMesh() {
-  m_turtle.setAngle(m_grammar.angle);
-  m_turtle.setStep(m_grammar.stepLen);
+  m_turtle.setAngle(m_angle);
+  m_turtle.setStep(m_stepLen);
   m_turtle.setFlowerRadius(m_flowerRadius);
   m_mesh = buildMesh(m_turtle, m_algo->getStructure());
   m_flowerMesh = m_turtle.lastFlowerMesh();
@@ -229,7 +226,7 @@ void TreeCanvas::rebuildMesh() {
                m_mesh.positions.size(), m_mesh.indices.size() / 2);
   if (spdlog::should_log(spdlog::level::debug)) {
     if (const auto* ss = std::get_if<StringStructure>(&m_algo->getStructure()))
-      spdlog::debug("[L-System] String: {}", wordToString(ss->derivation));
+      spdlog::debug("[L-System] String: {}", D::str(ss->derivation));
   }
   emit stateChanged(generation(), symbolCount());
   update();
@@ -276,8 +273,7 @@ void TreeCanvas::switchAlgo(int typeInt) {
       break;
     case AlgoType::Parametric: {
       auto pa = examples::parametricTree();
-      m_grammar.angle = pa.angle();
-      m_turtle.setAngle(m_grammar.angle);
+      m_angle = pa.angle();
 
       auto axiomStr = wordToParametricString(pa.axiomWord());
       auto len = std::min(axiomStr.size(), sizeof(m_paramAxiomBuf) - 1);
@@ -316,7 +312,7 @@ void TreeCanvas::switchAlgo(int typeInt) {
     }
   }
 
-  m_turtle.setAngle(m_grammar.angle);
+  m_angle = 25.f;
   populateGrammarBuffers();
   rebuildMesh();
   emit algoSwitched(typeInt);
@@ -330,12 +326,12 @@ void TreeCanvas::switchAlgo(int typeInt) {
 // ── Slots — visual params ─────────────────────────────────────────────────────
 
 void TreeCanvas::setAngle(double deg) {
-  m_grammar.angle = static_cast<float>(deg);
+  m_angle = static_cast<float>(deg);
   rebuildMesh();
 }
 
 void TreeCanvas::setStepLen(double len) {
-  m_grammar.stepLen = static_cast<float>(len);
+  m_stepLen = static_cast<float>(len);
   rebuildMesh();
 }
 
@@ -394,8 +390,9 @@ void TreeCanvas::setSymbols(TurtleSymbols s) {
 
 // ── Slots — grammar apply ─────────────────────────────────────────────────────
 
-void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules) {
-  m_grammar.axiom = stringToWord(axiom);
+void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules,
+                              const ContextEdit& ctx) {
+  m_grammar.axiom = D::w(axiom);
   m_grammar.rules.clear();
   for (const auto& re : rules) {
     if (re.predecessor[0] == '\0') continue;
@@ -406,10 +403,16 @@ void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEd
     if (re.rightContext[0] != '\0') rule.rightContext = re.rightContext[0];
     std::string succStr = re.successor;
     rule.successor = [succStr](std::span<const ParamValue>) -> Word {
-      return stringToWord(succStr);
+      return D::w(succStr);
     };
     m_grammar.rules.push_back(std::move(rule));
   }
+
+  m_grammar.ignore = ctx.ignore;
+  m_grammar.push = ctx.push[0] ? std::optional<char>(ctx.push[0]) : std::nullopt;
+  m_grammar.pop  = ctx.pop[0]  ? std::optional<char>(ctx.pop[0])  : std::nullopt;
+  m_grammar.includeSiblings = ctx.includeSiblings;
+  m_grammar.contextMode = ctx.strictMode ? ContextMode::Strict : ContextMode::Biological;
 
   if (m_algoType == AlgoType::Stochastic)
     m_algo = std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
@@ -448,7 +451,7 @@ void TreeCanvas::applyParametricGrammar(const std::string& axiom,
   }
 
   auto palgo = std::make_unique<ParametricLSystemAlgorithm>(std::move(pAxiom), std::move(prules),
-                                                            m_grammar.angle);
+                                                            m_angle);
 
   std::map<std::string, float> globals;
   for (const auto& pd : params)
