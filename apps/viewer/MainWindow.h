@@ -2,12 +2,14 @@
 
 #include <QMainWindow>
 
+class QDockWidget;
 class QLabel;
 
 namespace D {
 
-class TreeCanvas;
 class ControlPanel;
+class LogWidget;
+class TreeCanvas;
 
 class MainWindow final : public QMainWindow {
   Q_OBJECT
@@ -18,10 +20,14 @@ class MainWindow final : public QMainWindow {
  private:
   void createMenus();
   void refreshStatus();
+  void setupLogging();
 
-  TreeCanvas* m_canvas = nullptr;
-  ControlPanel* m_panel = nullptr;
-  QLabel* m_statusLabel = nullptr;
+  TreeCanvas*   m_canvas       = nullptr;
+  ControlPanel* m_panel        = nullptr;
+  QLabel*       m_statusLabel  = nullptr;
+  QDockWidget*  m_controlsDock = nullptr;
+  QDockWidget*  m_logDock      = nullptr;
+  LogWidget*    m_logWidget    = nullptr;
 };
 
 }  // namespace D

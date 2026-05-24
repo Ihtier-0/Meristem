@@ -5,6 +5,8 @@ set(_headers
   LSystemWidget.h
   GrammarWidget.h
   SettingsDialog.h
+  LogWidget.h
+  QtLogSink.h
   examples.h
 )
 set(_sources
@@ -15,6 +17,7 @@ set(_sources
   LSystemWidget.cpp
   GrammarWidget.cpp
   SettingsDialog.cpp
+  LogWidget.cpp
 )
 add_executable(viewer ${_headers} ${_sources})
 
@@ -28,6 +31,7 @@ target_link_libraries(viewer PRIVATE
   geometry
   renderer
   glad_gl_core
+  spdlog::spdlog
   Qt6::Core
   Qt6::Widgets
   Qt6::OpenGLWidgets

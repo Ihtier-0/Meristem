@@ -11,6 +11,8 @@
 
 #include <algorithm>
 
+#include <spdlog/spdlog.h>
+
 #include "examples.h"
 #include "structure/StringStructure.h"
 
@@ -224,6 +226,8 @@ void TreeCanvas::rebuildMesh() {
     m_renderer->setZoom(m_zoom);
     m_renderer->setPan(m_panX, m_panY);
   }
+  spdlog::debug("[Mesh] {} vertices, {} segments",
+               m_mesh.positions.size(), m_mesh.indices.size() / 2);
   emit stateChanged(generation(), symbolCount());
   update();
 }
@@ -233,11 +237,13 @@ void TreeCanvas::rebuildMesh() {
 void TreeCanvas::stepGeneration() {
   m_algo->step();
   rebuildMesh();
+  spdlog::info("[L-System] Step → gen {}, {} symbols", generation(), symbolCount());
 }
 
 void TreeCanvas::resetGeneration() {
   m_algo->reset();
   rebuildMesh();
+  spdlog::info("[L-System] Reset → gen {}, {} symbols", generation(), symbolCount());
 }
 
 void TreeCanvas::switchAlgo(int typeInt) {
@@ -312,6 +318,11 @@ void TreeCanvas::switchAlgo(int typeInt) {
   populateGrammarBuffers();
   rebuildMesh();
   emit algoSwitched(typeInt);
+
+  static constexpr std::array<const char*, 6> kAlgoNames = {
+      "D0L", "Stochastic", "Context-Sensitive 1L",
+      "Context-Sensitive 2L", "Parametric", "Context-Sensitive Flower"};
+  spdlog::info("[Algo] Switched to {}", kAlgoNames[typeInt]);
 }
 
 // ── Slots — visual params ─────────────────────────────────────────────────────
@@ -405,6 +416,7 @@ void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEd
     m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
 
   rebuildMesh();
+  spdlog::info("[Grammar] Applied: axiom='{}', {} rules", axiom, rules.size());
 }
 
 void TreeCanvas::applyParametricGrammar(const std::string& axiom,
@@ -444,6 +456,8 @@ void TreeCanvas::applyParametricGrammar(const std::string& axiom,
 
   m_algo = std::move(palgo);
   rebuildMesh();
+  spdlog::info("[Grammar] Applied parametric: axiom='{}', {} rules, {} params",
+               axiom, rules.size(), params.size());
 }
 
 }  // namespace D
