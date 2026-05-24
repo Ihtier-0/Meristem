@@ -4,10 +4,12 @@
 
 #include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
@@ -15,6 +17,7 @@ namespace D {
 
 GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
     : QGroupBox("Grammar", parent), m_canvas(canvas) {
+  setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
   auto* lay = new QVBoxLayout(this);
 
   m_grammarStack = new QStackedWidget;
@@ -24,6 +27,7 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   auto* normalPage = new QWidget;
   auto* nLay = new QVBoxLayout(normalPage);
   nLay->setContentsMargins(0, 0, 0, 0);
+  nLay->setSpacing(2);
 
   auto* axiomRow = new QWidget;
   auto* axHLay = new QHBoxLayout(axiomRow);
@@ -37,7 +41,16 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   m_rulesLayout = new QVBoxLayout(m_rulesWidget);
   m_rulesLayout->setContentsMargins(0, 0, 0, 0);
   m_rulesLayout->setSpacing(2);
-  nLay->addWidget(m_rulesWidget);
+  m_rulesLayout->addStretch();  // rules inserted before this via insertWidget(count-1, ...)
+
+  auto* rulesScroll = new QScrollArea;
+  rulesScroll->setWidgetResizable(true);
+  rulesScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  rulesScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // constant width
+  rulesScroll->setFrameShape(QFrame::NoFrame);
+  rulesScroll->setFixedHeight(220);
+  rulesScroll->setWidget(m_rulesWidget);
+  nLay->addWidget(rulesScroll);
 
   // ── Context settings (shown only for context-sensitive algos) ─────────────────
 
@@ -261,6 +274,10 @@ void GrammarWidget::rebuildRuleRows() {
   for (auto& row : m_normalRows) delete row.widget;
   m_normalRows.clear();
   for (const auto& re : m_canvas->ruleEdits()) addNormalRuleRow(re);
+  // Fill up to 4 rows so the panel doesn't look empty by default.
+  // Empty rows are skipped in applyGrammar (predecessor == '\0').
+  constexpr int kMinRows = 8;
+  while (static_cast<int>(m_normalRows.size()) < kMinRows) addNormalRuleRow({});
 }
 
 void GrammarWidget::rebuildParamRuleRows() {
@@ -324,7 +341,8 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   delBtn->setFixedWidth(24);
   hlay->addWidget(delBtn);
 
-  m_rulesLayout->addWidget(row.widget);
+  // Insert before the trailing stretch so rules stay at the top.
+  m_rulesLayout->insertWidget(m_rulesLayout->count() - 1, row.widget);
   QWidget* w = row.widget;
   m_normalRows.push_back(row);
 
