@@ -60,7 +60,7 @@ geometry ← renderer ← viewer
 ## Pipeline
 
 ```
-IPlantAlgorithm → PlantStructure (variant) → IGeometryBuilder → Mesh → IRenderer
+IPlantAlgorithm -> PlantStructure (variant) -> IGeometryBuilder -> Mesh -> IRenderer
 ```
 
 `PlantStructure = std::variant<StringStructure, TreeGraph>`
@@ -173,7 +173,7 @@ MoonrayGLRenderer : IRenderer   // future — Moonray's interactive GL viewport
 preview renderer, part of the Moonray production ray-tracer). It is *not* a
 custom PBR shader — it is a full renderer exposed as another `IRenderer` impl.
 
-Further future: USD Stage → Hydra delegate → Moonray/RenderMan/Arnold
+Further future: USD Stage -> Hydra delegate -> Moonray/RenderMan/Arnold
 (requires `D_ENABLE_USD` CMake option).
 
 ---
@@ -225,5 +225,5 @@ v0.5  Space Colonization Algorithm (TreeGraph pipeline)
 v1.0  OBJ/GLTF export, stable API
 v1.x  Table L-systems (T0L), differential L-systems (dL)
 v2.x  MoonrayGLRenderer (Moonray interactive GL viewport)
-v3.x  OpenUSD + Hydra delegate → Moonray/RenderMan/Arnold, leaves, LOD
+v3.x  OpenUSD + Hydra delegate -> Moonray/RenderMan/Arnold, leaves, LOD
 ```

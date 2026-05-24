@@ -15,7 +15,7 @@ Primary algorithm: L-systems (Lindenmayer systems). More algorithms to follow.
 ## Architecture
 
 ```
-IPlantAlgorithm → PlantStructure → IGeometryBuilder → Mesh → IRenderer
+IPlantAlgorithm -> PlantStructure -> IGeometryBuilder -> Mesh -> IRenderer
 ```
 
 `PlantStructure = std::variant<StringStructure, TreeGraph>` — dispatched via `std::visit`.  

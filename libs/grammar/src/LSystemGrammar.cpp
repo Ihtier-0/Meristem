@@ -525,7 +525,7 @@ TEST_SUITE("LSystemGrammar/valid()") {
   }
 
   TEST_CASE("probabilities do not sum to 1 -> invalid") {
-    // 0.6 + 0.3 = 0.9 ≠ 1.0 -> invalid.
+    // 0.6 + 0.3 = 0.9 != 1.0 -> invalid.
     D::LSystemGrammar g;
     g.rules = {
         D::ruleFor('A').to("B").withProbability(0.6f),
@@ -571,7 +571,7 @@ TEST_SUITE("LSystemGrammar/valid()") {
 
   TEST_CASE("Strict mode — probability check still runs") {
     // Probability validation must not be skipped in Strict mode.
-    // 0.6 + 0.3 = 0.9 ≠ 1.0 -> invalid even in Strict.
+    // 0.6 + 0.3 = 0.9 != 1.0 -> invalid even in Strict.
     D::LSystemGrammar g;
     g.contextMode = D::ContextMode::Strict;
     g.rules = {
@@ -649,10 +649,10 @@ TEST_SUITE("LSystemGrammar/Stochastic") {
     // Verifies probability weights are applied: p=0.8 must produce ~80% B,
     // not 50% (equal weights) or 100% (first rule always wins).
     //   n=2000, p=0.8, q=0.2
-    //   E = n·p          = 2000·0.8        = 1600
-    //   σ = √(n·p·q)     = √(2000·0.8·0.2) = √320 ≈ 17.9
-    //   bounds: E ± 5σ   ≈ 1600 ± 90      -> [1510, 1690]
-    // False-positive probability at ±5σ: < 0.0001%
+    //   E = n*p               = 2000*0.8          = 1600
+    //   sigma = sqrt(n*p*q)   = sqrt(2000*0.8*0.2) = sqrt(320) ~= 17.9
+    //   bounds: E +/- 5*sigma ~= 1600 +/- 90       -> [1510, 1690]
+    // False-positive probability at +/-5*sigma: < 0.0001%
     D::LSystemGrammar g;
     g.axiom = D::w("A");
     g.rules = {
@@ -665,8 +665,8 @@ TEST_SUITE("LSystemGrammar/Stochastic") {
       D::Word out = g.derive(g.axiom, rng);
       if (!out.empty() && out[0].letter == 'B') ++countB;
     }
-    CHECK(countB > 1510);  // E - 5σ
-    CHECK(countB < 1690);  // E + 5σ
+    CHECK(countB > 1510);  // E - 5*sigma
+    CHECK(countB < 1690);  // E + 5*sigma
   }
 
   TEST_CASE("no matching rule -> symbol passes through") {

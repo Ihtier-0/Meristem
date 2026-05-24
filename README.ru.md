@@ -13,7 +13,7 @@
 ## Архитектура
 
 ```
-IPlantAlgorithm → PlantStructure → IGeometryBuilder → Mesh → IRenderer
+IPlantAlgorithm -> PlantStructure -> IGeometryBuilder -> Mesh -> IRenderer
 ```
 
 Структура результата — `std::variant<StringStructure, TreeGraph>`, диспетчеризация через `std::visit`.  

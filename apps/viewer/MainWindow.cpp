@@ -106,7 +106,7 @@ void MainWindow::createMenus() {
 }
 
 void MainWindow::refreshStatus() {
-  m_statusLabel->setText(QString("Gen: %1   |   Symbols: %2   |   Zoom: %3×")
+  m_statusLabel->setText(QString("Gen: %1   |   Symbols: %2   |   Zoom: %3x")
                              .arg(m_canvas->generation())
                              .arg(m_canvas->symbolCount())
                              .arg(m_canvas->zoom(), 0, 'f', 3));

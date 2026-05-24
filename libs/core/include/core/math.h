@@ -60,7 +60,7 @@ inline const float* value_ptr(const Vec2& v) noexcept { return &v.x; }
 
 // ── Scalar functions ──────────────────────────────────────────────────────────
 
-// Returns true if |a - b| ≤ eps.
+// Returns true if |a - b| <= eps.
 // Uses an absolute epsilon — suitable for values of known magnitude
 // (e.g. probabilities in [0, 1]).  Modelled after Qt's qFuzzyCompare,
 // but absolute rather than relative.
@@ -70,7 +70,7 @@ inline bool fuzzyEqual(float a, float b, float eps = 1e-5f) noexcept {
 
 inline float radians(float deg) noexcept { return deg * std::numbers::pi_v<float> / 180.f; }
 
-// Orthographic projection — column-major, maps [l,r]×[b,t]×[n,f] to [-1,1]³.
+// Orthographic projection -- column-major, maps [l,r]x[b,t]x[n,f] to [-1,1]^3.
 // Drop-in replacement for glm::ortho(l, r, b, t, n, f).
 inline Mat4 ortho(float l, float r, float b, float t, float n, float f) noexcept {
   Mat4 m;
