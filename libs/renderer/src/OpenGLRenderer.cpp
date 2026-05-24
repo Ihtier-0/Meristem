@@ -4,8 +4,6 @@
 #include <string>
 
 #include <glad/gl.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 namespace D {
 
@@ -49,7 +47,7 @@ OpenGLRenderer::OpenGLRenderer(uint32_t width, uint32_t height)
 
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), nullptr);
   glEnableVertexAttribArray(0);
   glBindVertexArray(0);
 
@@ -82,11 +80,11 @@ void OpenGLRenderer::updateProjection() {
   float aspect = static_cast<float>(m_width) / static_cast<float>(m_height);
   float halfH = 10.f / m_zoom;
   float halfW = halfH * aspect;
-  glm::mat4 proj = glm::ortho(-halfW + m_panX,  halfW + m_panX,
-                               -halfH + m_panY,  halfH + m_panY,
-                               -1.f, 1.f);
+  Mat4 proj = ortho(-halfW + m_panX,  halfW + m_panX,
+                    -halfH + m_panY,  halfH + m_panY,
+                    -1.f, 1.f);
   glUseProgram(m_shader);
-  glUniformMatrix4fv(m_locProj, 1, GL_FALSE, glm::value_ptr(proj));
+  glUniformMatrix4fv(m_locProj, 1, GL_FALSE, value_ptr(proj));
 }
 
 void OpenGLRenderer::beginFrame() {
@@ -102,7 +100,7 @@ void OpenGLRenderer::submit(const DrawCall& dc) {
 
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glBufferData(GL_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(dc.mesh->positions.size() * sizeof(glm::vec3)),
+               static_cast<GLsizeiptr>(dc.mesh->positions.size() * sizeof(Vec3)),
                dc.mesh->positions.data(), GL_DYNAMIC_DRAW);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
@@ -111,7 +109,7 @@ void OpenGLRenderer::submit(const DrawCall& dc) {
                dc.mesh->indices.data(), GL_DYNAMIC_DRAW);
 
   glUseProgram(m_shader);
-  glUniform4fv(m_locColor, 1, glm::value_ptr(dc.color));
+  glUniform4fv(m_locColor, 1, value_ptr(dc.color));
 
   GLenum mode = (dc.mesh->mode == PrimitiveMode::Lines) ? GL_LINES : GL_TRIANGLES;
   glDrawElements(mode, static_cast<GLsizei>(dc.mesh->indices.size()),

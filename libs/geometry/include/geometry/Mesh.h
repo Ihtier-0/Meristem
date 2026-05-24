@@ -3,14 +3,14 @@
 #include <cstdint>
 #include <vector>
 
-#include <glm/glm.hpp>
+#include "core/math.h"
 
 namespace D {
 
 enum class PrimitiveMode : uint8_t { Lines, Triangles };
 
 struct Mesh {
-  std::vector<glm::vec3> positions;
+  std::vector<Vec3> positions;
   std::vector<uint32_t> indices;
   PrimitiveMode mode = PrimitiveMode::Triangles;
 

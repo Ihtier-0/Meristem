@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-#include <glm/vec4.hpp>
 #include <QColor>
 #include <QOpenGLWidget>
 
@@ -113,8 +112,8 @@ class TreeCanvas : public QOpenGLWidget {
   static std::string wordToString(const Word& word);
   static std::string wordToParametricString(const Word& word);
   static Word        stringToWord(std::string_view s);
-  static QColor      toQColor(glm::vec4 c);
-  static glm::vec4   toGlm(QColor c);
+  static QColor toQColor(Vec4 c);
+  static Vec4   toGlm(QColor c);
 
   std::unique_ptr<OpenGLRenderer> m_renderer;
 
@@ -134,9 +133,9 @@ class TreeCanvas : public QOpenGLWidget {
   float m_panY          = 0.f;
   float m_flowerRadius  = 0.3f;
 
-  glm::vec4 m_lineColor   = {0.6f, 0.9f, 0.5f, 1.f};
-  glm::vec4 m_flowerColor = {1.0f, 0.0f, 0.0f, 1.f};
-  glm::vec4 m_bgColor     = {0.08f, 0.08f, 0.08f, 1.f};
+  Vec4 m_lineColor   = {0.6f, 0.9f, 0.5f, 1.f};
+  Vec4 m_flowerColor = {1.0f, 0.0f, 0.0f, 1.f};
+  Vec4 m_bgColor     = {0.08f, 0.08f, 0.08f, 1.f};
 
   char                        m_axiomBuf[256]{};
   std::vector<RuleEdit>       m_ruleEdits;

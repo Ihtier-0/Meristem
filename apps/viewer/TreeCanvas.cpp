@@ -4,7 +4,6 @@
 #include "TreeCanvas.h"
 
 #include <QOpenGLContext>
-#include <glm/glm.hpp>
 
 #include "examples.h"
 #include "structure/StringStructure.h"
@@ -19,14 +18,14 @@ namespace D {
 
 // ── Static helpers ────────────────────────────────────────────────────────────
 
-QColor TreeCanvas::toQColor(glm::vec4 c) {
+QColor TreeCanvas::toQColor(Vec4 c) {
   return QColor::fromRgbF(
       static_cast<float>(c.r),
       static_cast<float>(c.g),
       static_cast<float>(c.b));
 }
 
-glm::vec4 TreeCanvas::toGlm(QColor c) {
+Vec4 TreeCanvas::toGlm(QColor c) {
   return {static_cast<float>(c.redF()),
           static_cast<float>(c.greenF()),
           static_cast<float>(c.blueF()),
@@ -127,8 +126,8 @@ void TreeCanvas::paintGL() {
   if (!m_renderer) return;
   m_renderer->setClearColor(m_bgColor);
   m_renderer->beginFrame();
-  m_renderer->submit({&m_mesh,       glm::mat4(1.f), m_lineColor});
-  m_renderer->submit({&m_flowerMesh, glm::mat4(1.f), m_flowerColor});
+  m_renderer->submit({&m_mesh,       Mat4{1.f}, m_lineColor});
+  m_renderer->submit({&m_flowerMesh, Mat4{1.f}, m_flowerColor});
   m_renderer->endFrame();
 }
 

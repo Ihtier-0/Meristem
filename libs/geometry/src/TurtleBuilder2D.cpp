@@ -20,9 +20,9 @@ Mesh TurtleBuilder2D::build(const StringStructure& s) {
   std::stack<State> stack;
 
   auto forward = [&](bool draw, float lenScale = 1.f) {
-    float rad = glm::radians(state.angle);
-    glm::vec2 dir = {std::cos(rad), std::sin(rad)};
-    glm::vec2 next = state.pos + dir * m_stepLen * lenScale;
+    float rad = radians(state.angle);
+    Vec2  dir  = {std::cos(rad), std::sin(rad)};
+    Vec2  next = state.pos + dir * m_stepLen * lenScale;
 
     if (draw) {
       auto base = static_cast<uint32_t>(mesh.positions.size());
@@ -51,8 +51,8 @@ Mesh TurtleBuilder2D::build(const StringStructure& s) {
     else if (c == m_symbols.flower) {
       // 1. draw a short stem in the current heading (into main mesh)
       float stemLen = m_stepLen * 0.6f;
-      float rad0    = glm::radians(state.angle);
-      glm::vec2 flowerPos = state.pos + glm::vec2{std::cos(rad0), std::sin(rad0)} * stemLen;
+      float rad0       = radians(state.angle);
+      Vec2  flowerPos  = state.pos + Vec2{std::cos(rad0), std::sin(rad0)} * stemLen;
       {
         auto base = static_cast<uint32_t>(mesh.positions.size());
         mesh.positions.push_back({state.pos.x,  state.pos.y,  0.f});
@@ -66,8 +66,8 @@ Mesh TurtleBuilder2D::build(const StringStructure& s) {
       for (int k = 0; k < kFlowerSegments; ++k) {
         float a0 = step * k;
         float a1 = step * (k + 1);
-        glm::vec2 p0 = flowerPos + glm::vec2{std::cos(a0), std::sin(a0)} * r;
-        glm::vec2 p1 = flowerPos + glm::vec2{std::cos(a1), std::sin(a1)} * r;
+        Vec2 p0 = flowerPos + Vec2{std::cos(a0), std::sin(a0)} * r;
+        Vec2 p1 = flowerPos + Vec2{std::cos(a1), std::sin(a1)} * r;
         auto base = static_cast<uint32_t>(m_lastFlowers.positions.size());
         m_lastFlowers.positions.push_back({p0.x, p0.y, 0.f});
         m_lastFlowers.positions.push_back({p1.x, p1.y, 0.f});

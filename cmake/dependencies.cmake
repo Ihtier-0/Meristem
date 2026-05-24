@@ -1,8 +1,5 @@
 include(cmake/get_cpm.cmake)
 
-# GLM — math (Vec2/Vec3/Mat4/Quat)
-CPMAddPackage("gh:g-truc/glm#1.0.1")
-
 # glad2 — OpenGL loader (requires Python 3 at configure time)
 CPMAddPackage(
   NAME glad

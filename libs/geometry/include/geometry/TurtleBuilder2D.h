@@ -37,7 +37,7 @@ class TurtleBuilder2D : public IGeometryBuilder {
 
  private:
   struct State {
-    glm::vec2 pos = {0.f, 0.f};
+    Vec2  pos   = {0.f, 0.f};
     float angle = 90.f;  // degrees, 90 = up
   };
 
