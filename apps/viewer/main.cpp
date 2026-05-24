@@ -3,10 +3,11 @@
 #include <QApplication>
 
 #include "MainWindow.h"
+#include "core/version.h"
 
 int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
-  app.setApplicationName("Meristem");
+  app.setApplicationName(MERISTEM_PROJECT_NAME);
 
   D::MainWindow window;
   window.show();
