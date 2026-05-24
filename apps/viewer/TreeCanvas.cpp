@@ -381,6 +381,11 @@ void TreeCanvas::setFlowerRadius(double r) {
   rebuildMesh();
 }
 
+void TreeCanvas::setSymbols(TurtleSymbols s) {
+  m_turtle.setSymbols(s);
+  rebuildMesh();
+}
+
 // ── Slots — grammar apply ─────────────────────────────────────────────────────
 
 void TreeCanvas::applyGrammar(const std::string& axiom,

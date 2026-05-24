@@ -63,10 +63,11 @@ class TreeCanvas : public QOpenGLWidget {
   double   panX()        const { return m_panX; }
   double   panY()        const { return m_panY; }
   int      seed()        const { return m_seed; }
-  double   flowerRadius() const { return m_flowerRadius; }
-  QColor   lineColor()   const;
-  QColor   flowerColor() const;
-  QColor   bgColor()     const;
+  double        flowerRadius() const { return m_flowerRadius; }
+  TurtleSymbols symbols()      const { return m_turtle.symbols(); }
+  QColor        lineColor()    const;
+  QColor        flowerColor()  const;
+  QColor        bgColor()      const;
 
   const char*                        axiomBuf()       const { return m_axiomBuf; }
   const char*                        paramAxiomBuf()  const { return m_paramAxiomBuf; }
@@ -90,6 +91,7 @@ class TreeCanvas : public QOpenGLWidget {
   void setBgColor(QColor c);
   void setFlowerColor(QColor c);
   void setFlowerRadius(double r);
+  void setSymbols(TurtleSymbols s);
 
   void applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules);
   void applyParametricGrammar(const std::string& axiom,
