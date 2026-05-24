@@ -33,13 +33,15 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
   m_panel        = new ControlPanel(m_canvas, this);
   m_controlsDock = new QDockWidget("Controls", this);
   m_controlsDock->setWidget(m_panel);
-  m_controlsDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+  m_controlsDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
+                              QDockWidget::DockWidgetFloatable);
   addDockWidget(Qt::LeftDockWidgetArea, m_controlsDock);
 
   m_logWidget = new LogWidget(this);
   m_logDock   = new QDockWidget("Log", this);
   m_logDock->setWidget(m_logWidget);
-  m_logDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+  m_logDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
+                         QDockWidget::DockWidgetFloatable);
   addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
   m_logDock->hide();
 
