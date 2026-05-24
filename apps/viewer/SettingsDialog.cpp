@@ -1,6 +1,7 @@
 #include "SettingsDialog.h"
 
 #include <functional>
+#include <memory>
 
 #include <QColorDialog>
 #include <QDoubleSpinBox>
@@ -23,16 +24,21 @@ QPushButton* colorButton(QColor color, QWidget* parent,
   btn->setMinimumWidth(60);
   btn->setFixedHeight(22);
 
-  auto applyStyle = [btn](QColor c) {
+  auto current = std::make_shared<QColor>(color);
+
+  auto applyStyle = [btn, current](QColor c) {
+    *current = c;
     btn->setStyleSheet(
         QString("background-color: rgb(%1,%2,%3); border: 1px solid #555;")
             .arg(c.red()).arg(c.green()).arg(c.blue()));
   };
   applyStyle(color);
 
-  QObject::connect(btn, &QPushButton::clicked, parent, [btn, applyStyle, onChange]() {
-    QColor c = QColorDialog::getColor(
-        btn->palette().button().color(), btn, "Pick color");
+  // Pass btn->window() (the Preferences dialog) as parent, not btn itself.
+  // If btn were passed, Qt would cascade btn's background-color stylesheet
+  // onto QColorDialog, tinting its entire background.
+  QObject::connect(btn, &QPushButton::clicked, parent, [btn, current, applyStyle, onChange]() {
+    QColor c = QColorDialog::getColor(*current, btn->window(), "Pick color");
     if (c.isValid()) { applyStyle(c); onChange(c); }
   });
 
