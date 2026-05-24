@@ -1,10 +1,16 @@
-add_executable(viewer
-  main.cpp
-  MainWindow.h    MainWindow.cpp
-  TreeCanvas.h    TreeCanvas.cpp
-  ControlPanel.h  ControlPanel.cpp
+set(_headers
+  MainWindow.h
+  TreeCanvas.h
+  ControlPanel.h
   examples.h
 )
+set(_sources
+  main.cpp
+  MainWindow.cpp
+  TreeCanvas.cpp
+  ControlPanel.cpp
+)
+add_executable(viewer ${_headers} ${_sources})
 
 set_target_properties(viewer PROPERTIES
   WIN32_EXECUTABLE TRUE
