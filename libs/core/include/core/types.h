@@ -25,7 +25,7 @@ struct Symbol {
 
 using Word = std::vector<Symbol>;
 
-// Build a Word from a plain string (each char → Symbol with no params).
+// Build a Word from a plain string (each char -> Symbol with no params).
 inline Word w(std::string_view s) {
   Word word;
   word.reserve(s.size());

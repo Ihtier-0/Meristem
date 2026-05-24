@@ -13,7 +13,11 @@ struct Vec2 {
   Vec2 operator+(Vec2 v) const noexcept { return {x + v.x, y + v.y}; }
   Vec2 operator-(Vec2 v) const noexcept { return {x - v.x, y - v.y}; }
   Vec2 operator*(float s) const noexcept { return {x * s, y * s}; }
-  Vec2& operator+=(Vec2 v) noexcept { x += v.x; y += v.y; return *this; }
+  Vec2& operator+=(Vec2 v) noexcept {
+    x += v.x;
+    y += v.y;
+    return *this;
+  }
 };
 inline Vec2 operator*(float s, Vec2 v) noexcept { return v * s; }
 
@@ -37,10 +41,8 @@ struct Mat4 {
 
   Mat4() noexcept = default;
 
-  // Mat4(1.f) → identity,  Mat4(0.f) → zero matrix
-  explicit Mat4(float diag) noexcept {
-    data[0] = data[5] = data[10] = data[15] = diag;
-  }
+  // Mat4(1.f) -> identity,  Mat4(0.f) -> zero matrix
+  explicit Mat4(float diag) noexcept { data[0] = data[5] = data[10] = data[15] = diag; }
 };
 
 // ── Quat — stub (reserved for 3D turtle, not yet used) ────────────────────────
@@ -66,21 +68,19 @@ inline bool fuzzyEqual(float a, float b, float eps = 1e-5f) noexcept {
   return std::abs(a - b) <= eps;
 }
 
-inline float radians(float deg) noexcept {
-  return deg * std::numbers::pi_v<float> / 180.f;
-}
+inline float radians(float deg) noexcept { return deg * std::numbers::pi_v<float> / 180.f; }
 
 // Orthographic projection — column-major, maps [l,r]×[b,t]×[n,f] to [-1,1]³.
 // Drop-in replacement for glm::ortho(l, r, b, t, n, f).
 inline Mat4 ortho(float l, float r, float b, float t, float n, float f) noexcept {
   Mat4 m;
-  m.data[ 0] =  2.f / (r - l);
-  m.data[ 5] =  2.f / (t - b);
+  m.data[0] = 2.f / (r - l);
+  m.data[5] = 2.f / (t - b);
   m.data[10] = -2.f / (f - n);
   m.data[12] = -(r + l) / (r - l);
   m.data[13] = -(t + b) / (t - b);
   m.data[14] = -(f + n) / (f - n);
-  m.data[15] =  1.f;
+  m.data[15] = 1.f;
   return m;
 }
 

@@ -119,7 +119,7 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
   paHLay->addWidget(m_paramAxiomEdit);
   pLay->addWidget(paramAxRow);
 
-  pLay->addWidget(new QLabel("Rules  pred(params) → expr:"));
+  pLay->addWidget(new QLabel("Rules  pred(params) -> expr:"));
   m_paramRulesWidget = new QWidget;
   m_paramRulesLayout = new QVBoxLayout(m_paramRulesWidget);
   m_paramRulesLayout->setContentsMargins(0, 0, 0, 0);
@@ -324,7 +324,7 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
     hlay->addWidget(row.rightCtx);
   }
 
-  hlay->addWidget(new QLabel("→"));
+  hlay->addWidget(new QLabel("->"));
   row.succ = new QLineEdit(re.successor);
   hlay->addWidget(row.succ);
 
@@ -370,7 +370,7 @@ void GrammarWidget::addParamRuleRow(const TreeCanvas::ParametricEdit& pe) {
   row.params = new QLineEdit(pe.paramNames);
   row.params->setFixedWidth(40);
   hlay->addWidget(row.params);
-  hlay->addWidget(new QLabel(")→"));
+  hlay->addWidget(new QLabel(")->"));
   row.expr = new QLineEdit(pe.successorExpr);
   hlay->addWidget(row.expr);
 

@@ -50,7 +50,7 @@ class RuleBuilder final {
 
   [[nodiscard]] operator Rule() const {
     assert(m_rule.predecessor != '\0' && "ruleFor() called with null predecessor");
-    assert(m_rule.successor   &&        "missing .to(...) call on RuleBuilder");
+    assert(m_rule.successor && "missing .to(...) call on RuleBuilder");
     return m_rule;
   }
 

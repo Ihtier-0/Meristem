@@ -115,7 +115,7 @@ class ParametricLSystemAlgorithm : public IPlantAlgorithm {
  public:
   struct PRule {
     char predecessor;
-    std::vector<std::string> paramNames; // e.g. {"s"} for A(s)→...
+    std::vector<std::string> paramNames; // e.g. {"s"} for A(s)->...
     std::string successorExpr;           // e.g. "F(s)[+A(s*0.7)][-A(s*0.7)]"
   };
 

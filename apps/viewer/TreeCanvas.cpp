@@ -237,13 +237,13 @@ void TreeCanvas::rebuildMesh() {
 void TreeCanvas::stepGeneration() {
   m_algo->step();
   rebuildMesh();
-  spdlog::info("[L-System] Step → gen {}, {} symbols", generation(), symbolCount());
+  spdlog::info("[L-System] Step -> gen {}, {} symbols", generation(), symbolCount());
 }
 
 void TreeCanvas::resetGeneration() {
   m_algo->reset();
   rebuildMesh();
-  spdlog::info("[L-System] Reset → gen {}, {} symbols", generation(), symbolCount());
+  spdlog::info("[L-System] Reset -> gen {}, {} symbols", generation(), symbolCount());
 }
 
 void TreeCanvas::switchAlgo(int typeInt) {

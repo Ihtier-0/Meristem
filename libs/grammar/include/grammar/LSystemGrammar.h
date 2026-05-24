@@ -26,8 +26,8 @@ struct LSystemGrammar final {
 
   // Biological mode context settings.
   // Ref: https://www.sidefx.com/docs/houdini/nodes/sop/lsystem.html
-  //   "Context Ignore"            → ignore
-  //   "Context Includes Siblings" → includeSiblings
+  //   "Context Ignore"            -> ignore
+  //   "Context Includes Siblings" -> includeSiblings
   std::string ignore;            // symbols skipped during context search (e.g. "+-|")
   std::optional<char> push;      // branch-open symbol  (e.g. '[')
   std::optional<char> pop;       // branch-close symbol (e.g. ']')
