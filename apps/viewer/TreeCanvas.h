@@ -6,6 +6,7 @@
 
 #include <QColor>
 #include <QOpenGLWidget>
+#include <QPoint>
 
 #include "algorithm/IPlantAlgorithm.h"
 #include "algorithm/D0LSystemAlgorithm.h"
@@ -98,11 +99,17 @@ class TreeCanvas : public QOpenGLWidget {
  signals:
   void stateChanged(int generation, int symbols);
   void algoSwitched(int typeInt);
+  void viewChanged(double zoom, double panX, double panY);
 
  protected:
   void initializeGL() override;
   void resizeGL(int w, int h) override;
   void paintGL() override;
+  void mousePressEvent(QMouseEvent* e) override;
+  void mouseMoveEvent(QMouseEvent* e) override;
+  void mouseReleaseEvent(QMouseEvent* e) override;
+  void wheelEvent(QWheelEvent* e) override;
+  void keyPressEvent(QKeyEvent* e) override;
 
  private:
   void initLSystem();
@@ -116,6 +123,9 @@ class TreeCanvas : public QOpenGLWidget {
   static Vec4   toGlm(QColor c);
 
   std::unique_ptr<OpenGLRenderer> m_renderer;
+
+  QPoint m_lastMousePos;
+  bool   m_panning = false;
 
   AlgoType                         m_algoType = AlgoType::D0L;
   std::unique_ptr<IPlantAlgorithm> m_algo;

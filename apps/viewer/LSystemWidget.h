@@ -20,6 +20,7 @@ class LSystemWidget : public QGroupBox {
  public slots:
   void onStateChanged(int gen, int syms);
   void onAlgoSwitched(int typeInt);
+  void onViewChanged(double zoom, double panX, double panY);
 
  private:
   void updateSeedVisibility();

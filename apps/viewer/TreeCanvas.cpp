@@ -3,7 +3,12 @@
 
 #include "TreeCanvas.h"
 
+#include <algorithm>
+
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QOpenGLContext>
+#include <QWheelEvent>
 
 #include "examples.h"
 #include "structure/StringStructure.h"
@@ -78,6 +83,7 @@ TreeCanvas::RuleEdit TreeCanvas::ruleToEdit(const Rule& rule) {
 // ── Construction ──────────────────────────────────────────────────────────────
 
 TreeCanvas::TreeCanvas(QWidget* parent) : QOpenGLWidget(parent), m_turtle(25.f) {
+  setFocusPolicy(Qt::StrongFocus);
   initLSystem();
 
   QSurfaceFormat fmt;
@@ -129,6 +135,71 @@ void TreeCanvas::paintGL() {
   m_renderer->submit({&m_mesh,       Mat4{1.f}, m_lineColor});
   m_renderer->submit({&m_flowerMesh, Mat4{1.f}, m_flowerColor});
   m_renderer->endFrame();
+}
+
+// ── Viewport navigation ───────────────────────────────────────────────────────
+
+void TreeCanvas::wheelEvent(QWheelEvent* e) {
+  const float factor = e->angleDelta().y() > 0 ? 1.1f : (1.f / 1.1f);
+  m_zoom = std::clamp(m_zoom * factor, 0.05f, 50.f);
+  if (m_renderer) m_renderer->setZoom(m_zoom);
+  emit viewChanged(m_zoom, m_panX, m_panY);
+  update();
+  e->accept();
+}
+
+void TreeCanvas::mousePressEvent(QMouseEvent* e) {
+  if (e->button() == Qt::MiddleButton) {
+    m_panning      = true;
+    m_lastMousePos = e->pos();
+    setCursor(Qt::SizeAllCursor);
+    e->accept();
+    return;
+  }
+  QOpenGLWidget::mousePressEvent(e);
+}
+
+void TreeCanvas::mouseMoveEvent(QMouseEvent* e) {
+  if (m_panning) {
+    const QPoint delta = e->pos() - m_lastMousePos;
+    m_lastMousePos = e->pos();
+    const float sensitivity = 0.3f / m_zoom;
+    m_panX += static_cast<float>(delta.x()) * sensitivity;
+    m_panY -= static_cast<float>(delta.y()) * sensitivity;
+    if (m_renderer) m_renderer->setPan(m_panX, m_panY);
+    emit viewChanged(m_zoom, m_panX, m_panY);
+    update();
+    e->accept();
+    return;
+  }
+  QOpenGLWidget::mouseMoveEvent(e);
+}
+
+void TreeCanvas::mouseReleaseEvent(QMouseEvent* e) {
+  if (e->button() == Qt::MiddleButton) {
+    m_panning = false;
+    setCursor(Qt::ArrowCursor);
+    e->accept();
+    return;
+  }
+  QOpenGLWidget::mouseReleaseEvent(e);
+}
+
+void TreeCanvas::keyPressEvent(QKeyEvent* e) {
+  if (e->key() == Qt::Key_F || e->key() == Qt::Key_Home) {
+    m_zoom = 1.f;
+    m_panX = 0.f;
+    m_panY = 0.f;
+    if (m_renderer) {
+      m_renderer->setZoom(m_zoom);
+      m_renderer->setPan(m_panX, m_panY);
+    }
+    emit viewChanged(m_zoom, m_panX, m_panY);
+    update();
+    e->accept();
+    return;
+  }
+  QOpenGLWidget::keyPressEvent(e);
 }
 
 // ── Accessors ─────────────────────────────────────────────────────────────────
@@ -264,18 +335,21 @@ void TreeCanvas::setStepLen(double len) {
 void TreeCanvas::setZoom(double z) {
   m_zoom = static_cast<float>(z);
   if (m_renderer) m_renderer->setZoom(m_zoom);
+  emit viewChanged(m_zoom, m_panX, m_panY);
   update();
 }
 
 void TreeCanvas::setPanX(double x) {
   m_panX = static_cast<float>(x);
   if (m_renderer) m_renderer->setPan(m_panX, m_panY);
+  emit viewChanged(m_zoom, m_panX, m_panY);
   update();
 }
 
 void TreeCanvas::setPanY(double y) {
   m_panY = static_cast<float>(y);
   if (m_renderer) m_renderer->setPan(m_panX, m_panY);
+  emit viewChanged(m_zoom, m_panX, m_panY);
   update();
 }
 

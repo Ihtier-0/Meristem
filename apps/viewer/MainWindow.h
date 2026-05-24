@@ -2,6 +2,8 @@
 
 #include <QMainWindow>
 
+class QLabel;
+
 namespace D {
 
 class TreeCanvas;
@@ -15,9 +17,11 @@ class MainWindow : public QMainWindow {
 
  private:
   void createMenus();
+  void refreshStatus();
 
-  TreeCanvas*   m_canvas = nullptr;
-  ControlPanel* m_panel  = nullptr;
+  TreeCanvas*   m_canvas      = nullptr;
+  ControlPanel* m_panel       = nullptr;
+  QLabel*       m_statusLabel = nullptr;
 };
 
 }  // namespace D

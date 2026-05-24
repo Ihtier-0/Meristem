@@ -98,6 +98,15 @@ void LSystemWidget::onAlgoSwitched(int) {
   updateSeedVisibility();
 }
 
+void LSystemWidget::onViewChanged(double zoom, double panX, double panY) {
+  QSignalBlocker bz(m_zoomSpin);
+  QSignalBlocker bx(m_panXSpin);
+  QSignalBlocker by(m_panYSpin);
+  m_zoomSpin->setValue(zoom);
+  m_panXSpin->setValue(panX);
+  m_panYSpin->setValue(panY);
+}
+
 void LSystemWidget::updateSeedVisibility() {
   m_seedRow->setVisible(m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
 }
