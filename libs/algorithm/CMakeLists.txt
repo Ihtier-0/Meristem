@@ -7,3 +7,4 @@ add_library(algorithm INTERFACE
 )
 target_include_directories(algorithm INTERFACE include)
 target_link_libraries(algorithm INTERFACE grammar structure environment)
+set_target_properties(algorithm PROPERTIES FOLDER "Meristem")

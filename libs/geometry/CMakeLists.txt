@@ -6,3 +6,4 @@ add_library(geometry STATIC
 )
 target_include_directories(geometry PUBLIC include)
 target_link_libraries(geometry PUBLIC structure)
+set_target_properties(geometry PROPERTIES FOLDER "Meristem")

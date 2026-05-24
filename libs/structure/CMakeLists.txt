@@ -5,3 +5,4 @@ add_library(structure INTERFACE
 )
 target_include_directories(structure INTERFACE include)
 target_link_libraries(structure INTERFACE core)
+set_target_properties(structure PROPERTIES FOLDER "Meristem")

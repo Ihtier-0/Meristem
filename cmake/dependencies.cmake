@@ -8,9 +8,19 @@ CPMAddPackage(
   SOURCE_SUBDIR cmake
 )
 glad_add_library(glad_gl_core REPRODUCIBLE LOADER API gl:core=4.6)
+foreach(_glad_target glad_gl_core glad-generate-files)
+  if(TARGET ${_glad_target})
+    set_target_properties(${_glad_target} PROPERTIES FOLDER "glad")
+  endif()
+endforeach()
 
 # spdlog — logging
 CPMAddPackage("gh:gabime/spdlog#v1.14.1")
+foreach(_spdlog_target spdlog spdlog_header_only)
+  if(TARGET ${_spdlog_target})
+    set_target_properties(${_spdlog_target} PROPERTIES FOLDER "spdlog")
+  endif()
+endforeach()
 
 # Qt6 — UI only
 # On Windows: auto-detect the newest msvc2022_64 build in common Qt install roots.

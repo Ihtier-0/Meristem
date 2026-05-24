@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/dependencies.cmake)
 include(cmake/platform.cmake)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 set(CMAKE_AUTOMOC ON)
 
 add_subdirectory(libs)

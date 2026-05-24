@@ -6,7 +6,10 @@ add_executable(viewer
   examples.h
 )
 
-set_target_properties(viewer PROPERTIES WIN32_EXECUTABLE TRUE)
+set_target_properties(viewer PROPERTIES
+  WIN32_EXECUTABLE TRUE
+  FOLDER "Meristem"
+)
 
 target_link_libraries(viewer PRIVATE
   algorithm

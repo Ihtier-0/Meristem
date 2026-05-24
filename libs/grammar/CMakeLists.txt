@@ -5,3 +5,4 @@ add_library(grammar STATIC
 )
 target_include_directories(grammar PUBLIC include)
 target_link_libraries(grammar PUBLIC core)
+set_target_properties(grammar PROPERTIES FOLDER "Meristem")

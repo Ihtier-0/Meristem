@@ -6,3 +6,4 @@ add_library(renderer STATIC
 )
 target_include_directories(renderer PUBLIC include)
 target_link_libraries(renderer PUBLIC geometry glad_gl_core)
+set_target_properties(renderer PROPERTIES FOLDER "Meristem")
