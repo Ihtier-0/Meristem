@@ -88,13 +88,15 @@ char rightCtx(const Word& w, size_t i, std::string_view ignore, std::optional<ch
 // ── Grammar methods ───────────────────────────────────────────────────────────
 
 bool LSystemGrammar::valid() const {
-  if (contextMode == ContextMode::Strict) return true;
-  for (const Rule& r : rules) {
-    auto bad = [&](char c) {
-      return ignore.find(c) != std::string::npos || (push && c == *push) || (pop && c == *pop);
-    };
-    if (r.leftContext && bad(*r.leftContext)) return false;
-    if (r.rightContext && bad(*r.rightContext)) return false;
+  // Context-char validation only applies in Biological mode.
+  if (contextMode == ContextMode::Biological) {
+    for (const Rule& r : rules) {
+      auto bad = [&](char c) {
+        return ignore.find(c) != std::string::npos || (push && c == *push) || (pop && c == *pop);
+      };
+      if (r.leftContext && bad(*r.leftContext)) return false;
+      if (r.rightContext && bad(*r.rightContext)) return false;
+    }
   }
 
   for (size_t i = 0; i < rules.size(); ++i) {
@@ -160,6 +162,7 @@ Word LSystemGrammar::derive(const Word& current) const {
 
       if (rule.condition && !rule.condition(sym.params)) continue;
 
+      assert(rule.successor && "rule has no successor (missing .to(...) call)");
       Word produced = rule.successor(sym.params);
       result.insert(result.end(), produced.begin(), produced.end());
       applied = true;
@@ -224,6 +227,7 @@ Word LSystemGrammar::derive(const Word& current, std::mt19937& rng) const {
       }
     }
 
+    assert(chosen->successor && "rule has no successor (missing .to(...) call)");
     Word produced = chosen->successor(sym.params);
     result.insert(result.end(), produced.begin(), produced.end());
   }
@@ -531,6 +535,18 @@ TEST_SUITE("LSystemGrammar/valid()") {
     D::LSystemGrammar g;
     g.rules = {D::ruleFor('A').to("B").withProbability(1.f)};
     CHECK(g.valid());
+  }
+
+  TEST_CASE("Strict mode — probability check still runs") {
+    // Probability validation must not be skipped in Strict mode.
+    // 0.6 + 0.3 = 0.9 ≠ 1.0 → invalid even in Strict.
+    D::LSystemGrammar g;
+    g.contextMode = D::ContextMode::Strict;
+    g.rules = {
+        D::ruleFor('A').to("B").withProbability(0.6f),
+        D::ruleFor('A').to("C").withProbability(0.3f),
+    };
+    CHECK_FALSE(g.valid());
   }
 
 }  // TEST_SUITE("LSystemGrammar/valid()")

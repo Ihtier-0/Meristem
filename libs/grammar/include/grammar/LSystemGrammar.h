@@ -20,7 +20,7 @@ enum class ContextMode {
   Strict,
 };
 
-struct LSystemGrammar {
+struct LSystemGrammar final {
   Word axiom;
   std::vector<Rule> rules;
 
@@ -35,10 +35,10 @@ struct LSystemGrammar {
 
   ContextMode contextMode = ContextMode::Biological;
 
-  bool valid() const;
+  [[nodiscard]] bool valid() const;
 
-  Word derive(const Word& current) const;
-  Word derive(const Word& current, std::mt19937& rng) const;
+  [[nodiscard]] Word derive(const Word& current) const;
+  [[nodiscard]] Word derive(const Word& current, std::mt19937& rng) const;
 };
 
 }  // namespace D
