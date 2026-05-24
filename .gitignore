@@ -6,4 +6,5 @@ out/
 *.db
 *.opendb
 CMakeSettings.json
+CMakeUserPresets.json
 .claude/

@@ -45,7 +45,7 @@ libs/
   renderer/     include/renderer/            — DrawCall, IRenderer
 
 apps/
-  viewer/       — GLFW window, ImGui, main loop
+  viewer/       — Qt6 QMainWindow, QOpenGLWidget, sidebar
 ```
 
 **Dependency rule (no cycles):**
@@ -178,19 +178,39 @@ Further future: USD Stage → Hydra delegate → Moonray/RenderMan/Arnold
 
 ---
 
-## Dependencies (CPM v0.42.3)
+## Dependencies
 
-| Library       | Version  | Purpose                        | Required |
-|---------------|----------|--------------------------------|----------|
-| glfw          | 3.4      | window, input                  | yes      |
-| glm           | 1.0.1    | Vec2/Vec3/Mat4/Quat            | yes      |
-| glad2         | v2.0.6   | OpenGL loader (needs Python 3) | yes      |
-| spdlog        | v1.14.1  | logging                        | yes      |
-| imgui         | v1.91.6  | GUI + node editor              | yes      |
-| assimp        | —        | OBJ/GLTF export                | optional |
-| pxr (OpenUSD) | —        | OpenUSD integration            | optional |
+| Library       | How        | Version  | Purpose                        | Required |
+|---------------|------------|----------|--------------------------------|----------|
+| Qt6           | system     | 6.x      | UI (Widgets + OpenGLWidgets)   | yes      |
+| glm           | CPM        | 1.0.1    | Vec2/Vec3/Mat4/Quat            | yes      |
+| glad2         | CPM        | v2.0.6   | OpenGL loader (needs Python 3) | yes      |
+| spdlog        | CPM        | v1.14.1  | logging                        | yes      |
+| assimp        | —          | —        | OBJ/GLTF export                | optional |
+| pxr (OpenUSD) | —          | —        | OpenUSD integration            | optional |
 
-All dependencies are MIT or zlib licensed — no copyleft restrictions.
+Qt6 must be installed system-wide (Qt Online Installer, `msvc2022_64` variant).
+
+**No setup required** if Qt is installed in `C:\Qt\` or `D:\Qt\` — CMake auto-detects it.
+
+If Qt is somewhere unusual, override by setting `CMAKE_PREFIX_PATH` (via `CMakeUserPresets.json`,
+which is in `.gitignore` and not committed):
+```json
+{
+  "version": 6,
+  "include": ["CMakePresets.json"],
+  "configurePresets": [
+    {
+      "name": "x64-Debug",
+      "inherits": "x64-Debug",
+      "cacheVariables": { "CMAKE_PREFIX_PATH": "E:/MyQt/6.9.0/msvc2022_64" }
+    }
+  ]
+}
+```
+
+**Architectural rule:** Qt dependency is confined to `apps/viewer/`.
+All libs (`algorithm`, `geometry`, `grammar`, etc.) must stay Qt-free.
 
 ---
 

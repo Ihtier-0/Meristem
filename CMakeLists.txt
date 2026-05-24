@@ -9,5 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/dependencies.cmake)
 include(cmake/platform.cmake)
 
+set(CMAKE_AUTOMOC ON)
+
 add_subdirectory(libs)
 add_subdirectory(apps)
