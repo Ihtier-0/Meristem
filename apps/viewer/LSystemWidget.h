@@ -19,7 +19,6 @@ class LSystemWidget final : public QGroupBox {
 
  public slots:
   void onAlgoSwitched(int typeInt);
-  void onViewChanged(double zoom, double panX, double panY);
 
  private:
   void updateSeedVisibility();
@@ -30,9 +29,6 @@ class LSystemWidget final : public QGroupBox {
   QSpinBox* m_seedSpin = nullptr;
   QDoubleSpinBox* m_angleSpin = nullptr;
   QDoubleSpinBox* m_stepSpin = nullptr;
-  QDoubleSpinBox* m_zoomSpin = nullptr;
-  QDoubleSpinBox* m_panXSpin = nullptr;
-  QDoubleSpinBox* m_panYSpin = nullptr;
 };
 
 }  // namespace D

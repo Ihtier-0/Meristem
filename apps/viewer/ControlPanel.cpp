@@ -29,7 +29,6 @@ ControlPanel::ControlPanel(TreeCanvas* canvas, QWidget* parent) : QScrollArea(pa
 
   connect(canvas, &TreeCanvas::algoSwitched, m_lsystem, &LSystemWidget::onAlgoSwitched);
   connect(canvas, &TreeCanvas::algoSwitched, m_grammar, &GrammarWidget::onAlgoSwitched);
-  connect(canvas, &TreeCanvas::viewChanged, m_lsystem, &LSystemWidget::onViewChanged);
 }
 
 }  // namespace D
