@@ -228,6 +228,10 @@ void TreeCanvas::rebuildMesh() {
   }
   spdlog::debug("[Mesh] {} vertices, {} segments",
                m_mesh.positions.size(), m_mesh.indices.size() / 2);
+  if (spdlog::should_log(spdlog::level::debug)) {
+    if (const auto* ss = std::get_if<StringStructure>(&m_algo->getStructure()))
+      spdlog::debug("[L-System] String: {}", wordToString(ss->derivation));
+  }
   emit stateChanged(generation(), symbolCount());
   update();
 }
