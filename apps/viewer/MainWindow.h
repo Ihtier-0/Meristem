@@ -14,6 +14,8 @@ class MainWindow : public QMainWindow {
   explicit MainWindow(QWidget* parent = nullptr);
 
  private:
+  void createMenus();
+
   TreeCanvas*   m_canvas = nullptr;
   ControlPanel* m_panel  = nullptr;
 };

@@ -1,9 +1,7 @@
 #include "ControlPanel.h"
 
 #include <algorithm>
-#include <functional>
 
-#include <QColorDialog>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -42,7 +40,6 @@ void ControlPanel::buildUi() {
 
   rootLay->addWidget(buildControlSection());
   rootLay->addWidget(buildGrammarSection());
-  rootLay->addWidget(buildSettingsSection());
   rootLay->addStretch();
 
   setWidget(root);
@@ -231,60 +228,6 @@ QWidget* ControlPanel::buildGrammarSection() {
   return box;
 }
 
-QWidget* ControlPanel::buildSettingsSection() {
-  auto* box  = new QGroupBox("Settings");
-  auto* form = new QFormLayout(box);
-
-  form->addRow("Line color:",
-      makeColorButton(m_canvas->lineColor(),
-          [this](QColor c) { m_canvas->setLineColor(c); }));
-
-  form->addRow("Background:",
-      makeColorButton(m_canvas->bgColor(),
-          [this](QColor c) { m_canvas->setBgColor(c); }));
-
-  form->addRow("Flower color:",
-      makeColorButton(m_canvas->flowerColor(),
-          [this](QColor c) { m_canvas->setFlowerColor(c); }));
-
-  auto* radSpin = new QDoubleSpinBox;
-  radSpin->setRange(0.05, 3.0);
-  radSpin->setSingleStep(0.05);
-  radSpin->setDecimals(2);
-  radSpin->setValue(m_canvas->flowerRadius());
-  connect(radSpin, &QDoubleSpinBox::valueChanged,
-          m_canvas, &TreeCanvas::setFlowerRadius);
-  form->addRow("Flower radius:", radSpin);
-
-  return box;
-}
-
-// ── Color button helper ───────────────────────────────────────────────────────
-
-QPushButton* ControlPanel::makeColorButton(QColor initial,
-                                            std::function<void(QColor)> onChange) {
-  auto* btn = new QPushButton;
-  btn->setMinimumWidth(60);
-  btn->setFixedHeight(22);
-
-  auto applyStyle = [btn](QColor c) {
-    btn->setStyleSheet(
-        QString("background-color: rgb(%1,%2,%3); border: 1px solid #555;")
-            .arg(c.red()).arg(c.green()).arg(c.blue()));
-  };
-  applyStyle(initial);
-
-  connect(btn, &QPushButton::clicked, this, [btn, onChange, applyStyle]() {
-    QColor c = QColorDialog::getColor(
-        btn->palette().button().color(), btn, "Pick colour");
-    if (c.isValid()) {
-      applyStyle(c);
-      onChange(c);
-    }
-  });
-
-  return btn;
-}
 
 // ── Rule rows — normal grammar ────────────────────────────────────────────────
 

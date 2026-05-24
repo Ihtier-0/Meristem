@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <vector>
 
 #include <QColor>
@@ -40,7 +39,6 @@ class ControlPanel : public QScrollArea {
 
   QWidget* buildControlSection();
   QWidget* buildGrammarSection();
-  QWidget* buildSettingsSection();
 
   void rebuildRuleRows();
   void rebuildParamRuleRows();
@@ -51,8 +49,6 @@ class ControlPanel : public QScrollArea {
   void addParamDefRow(const TreeCanvas::ParamDef& pd);
 
   void updateContextVisibility();
-
-  QPushButton* makeColorButton(QColor initial, std::function<void(QColor)> onChange);
 
   TreeCanvas* m_canvas;
 
