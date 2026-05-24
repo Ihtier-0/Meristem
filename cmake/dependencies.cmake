@@ -22,6 +22,20 @@ foreach(_spdlog_target spdlog spdlog_header_only)
   endif()
 endforeach()
 
+# doctest — header-only unit test framework
+# DOWNLOAD_ONLY: skip doctest's own CMakeLists (uses cmake_minimum_required < 3.5,
+# which CMake 3.30+ no longer accepts). We only need the single header.
+CPMAddPackage(
+  NAME doctest
+  GITHUB_REPOSITORY doctest/doctest
+  GIT_TAG v2.4.11
+  DOWNLOAD_ONLY YES
+)
+if(doctest_ADDED)
+  add_library(doctest::doctest INTERFACE IMPORTED GLOBAL)
+  target_include_directories(doctest::doctest INTERFACE "${doctest_SOURCE_DIR}")
+endif()
+
 # Qt6 — UI only
 # On Windows: auto-detect the newest msvc2022_64 build in common Qt install roots.
 # Override by setting CMAKE_PREFIX_PATH or Qt6_DIR if Qt is somewhere unusual.

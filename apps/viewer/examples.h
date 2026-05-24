@@ -10,22 +10,10 @@ inline LSystemGrammar binaryTree() {
   LSystemGrammar g;
   g.angle = 25.f;
   g.axiom = {Symbol('A')};
-
-  g.rules.push_back({
-      .predecessor = 'A',
-      .successor = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('['), Symbol('+'), Symbol('A'),
-                Symbol(']'), Symbol('['), Symbol('-'), Symbol('A'), Symbol(']')};
-      },
-  });
-
-  g.rules.push_back({
-      .predecessor = 'F',
-      .successor = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('F')};
-      },
-  });
-
+  g.rules = {
+      ruleFor('A').to("F[+A][-A]"),
+      ruleFor('F').to("FF"),
+  };
   return g;
 }
 
@@ -36,26 +24,10 @@ inline LSystemGrammar stochasticPlant() {
   LSystemGrammar g;
   g.angle = 25.f;
   g.axiom = {Symbol('F')};
-
-  g.rules.push_back({
-      .predecessor  = 'F',
-      .probability  = 0.6f,
-      .successor    = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('['), Symbol('+'), Symbol('F'),
-                Symbol(']'), Symbol('F'), Symbol('['), Symbol('-'),
-                Symbol('F'), Symbol(']'), Symbol('F')};
-      },
-  });
-
-  g.rules.push_back({
-      .predecessor  = 'F',
-      .probability  = 0.4f,
-      .successor    = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('['), Symbol('+'), Symbol('F'),
-                Symbol(']'), Symbol('F')};
-      },
-  });
-
+  g.rules = {
+      ruleFor('F').to("F[+F]F[-F]F").withProbability(0.6f),
+      ruleFor('F').to("F[+F]F").withProbability(0.4f),
+  };
   return g;
 }
 
@@ -69,40 +41,14 @@ inline LSystemGrammar contextSensitivePlant() {
   LSystemGrammar g;
   g.angle = 25.f;
   g.axiom = {Symbol('X')};
-
-  // F < X → F-[[X]+X]+F[+FX]-X  (context rule — MUST come before default)
-  g.rules.push_back({
-      .predecessor = 'X',
-      .leftContext  = 'F',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('-'), Symbol('['), Symbol('['),
-                Symbol('X'), Symbol(']'), Symbol('+'), Symbol('X'),
-                Symbol(']'), Symbol('+'), Symbol('F'), Symbol('['),
-                Symbol('+'), Symbol('F'), Symbol('X'), Symbol(']'),
-                Symbol('-'), Symbol('X')};
-      },
-  });
-
-  // X → F+[[X]-X]-F[-FX]+X  (default)
-  g.rules.push_back({
-      .predecessor = 'X',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('+'), Symbol('['), Symbol('['),
-                Symbol('X'), Symbol(']'), Symbol('-'), Symbol('X'),
-                Symbol(']'), Symbol('-'), Symbol('F'), Symbol('['),
-                Symbol('-'), Symbol('F'), Symbol('X'), Symbol(']'),
-                Symbol('+'), Symbol('X')};
-      },
-  });
-
-  // F → FF
-  g.rules.push_back({
-      .predecessor = 'F',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('F')};
-      },
-  });
-
+  g.rules = {
+      // F < X → F-[[X]+X]+F[+FX]-X  (context rule — MUST come before default)
+      ruleFor('X').withLeftContext('F').to("F-[[X]+X]+F[+FX]-X"),
+      // X → F+[[X]-X]-F[-FX]+X  (default)
+      ruleFor('X').to("F+[[X]-X]-F[-FX]+X"),
+      // F → FF
+      ruleFor('F').to("FF"),
+  };
   return g;
 }
 
@@ -117,53 +63,16 @@ inline LSystemGrammar contextSensitive2LPlant() {
   LSystemGrammar g;
   g.angle = 25.f;
   g.axiom = {Symbol('X')};
-
-  // [ < X > ] → F-[[X]+X]+F[+FX]-X  (mirrored — MUST be before default)
-  g.rules.push_back({
-      .predecessor  = 'X',
-      .leftContext  = '[',
-      .rightContext = ']',
-      .successor    = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('-'), Symbol('['), Symbol('['),
-                Symbol('X'), Symbol(']'), Symbol('+'), Symbol('X'),
-                Symbol(']'), Symbol('+'), Symbol('F'), Symbol('['),
-                Symbol('+'), Symbol('F'), Symbol('X'), Symbol(']'),
-                Symbol('-'), Symbol('X')};
-      },
-  });
-
-  // F < X > ] → F[+X]F[-X]X  (simpler alternating — MUST be before default)
-  g.rules.push_back({
-      .predecessor  = 'X',
-      .leftContext  = 'F',
-      .rightContext = ']',
-      .successor    = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('['), Symbol('+'), Symbol('X'),
-                Symbol(']'), Symbol('F'), Symbol('['), Symbol('-'),
-                Symbol('X'), Symbol(']'), Symbol('X')};
-      },
-  });
-
-  // X → F+[[X]-X]-F[-FX]+X  (default ABP fractal plant)
-  g.rules.push_back({
-      .predecessor = 'X',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('+'), Symbol('['), Symbol('['),
-                Symbol('X'), Symbol(']'), Symbol('-'), Symbol('X'),
-                Symbol(']'), Symbol('-'), Symbol('F'), Symbol('['),
-                Symbol('-'), Symbol('F'), Symbol('X'), Symbol(']'),
-                Symbol('+'), Symbol('X')};
-      },
-  });
-
-  // F → FF
-  g.rules.push_back({
-      .predecessor = 'F',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('F')};
-      },
-  });
-
+  g.rules = {
+      // [ < X > ] → F-[[X]+X]+F[+FX]-X  (mirrored — MUST be before default)
+      ruleFor('X').withLeftContext('[').withRightContext(']').to("F-[[X]+X]+F[+FX]-X"),
+      // F < X > ] → F[+X]F[-X]X  (simpler alternating — MUST be before default)
+      ruleFor('X').withLeftContext('F').withRightContext(']').to("F[+X]F[-X]X"),
+      // X → F+[[X]-X]-F[-FX]+X  (default ABP fractal plant)
+      ruleFor('X').to("F+[[X]-X]-F[-FX]+X"),
+      // F → FF
+      ruleFor('F').to("FF"),
+  };
   return g;
 }
 
@@ -194,59 +103,14 @@ inline LSystemGrammar contextSensitiveFlower() {
   LSystemGrammar g;
   g.angle = 25.f;
   g.axiom = {Symbol('A')};
-
-  // F < a → K  (MUST be before default 'a' rule)
-  g.rules.push_back({
-      .predecessor = 'a',
-      .leftContext  = 'F',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('K')};
-      },
-  });
-
-  // i < a → a  (MUST be before default 'a' rule)
-  g.rules.push_back({
-      .predecessor = 'a',
-      .leftContext  = 'i',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('a')};
-      },
-  });
-
-  // a → a  (default: stay dormant)
-  g.rules.push_back({
-      .predecessor = 'a',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('a')};
-      },
-  });
-
-  // A → i[+a][-a]A  (active apex: add segment + dormant laterals, continue growing)
-  g.rules.push_back({
-      .predecessor = 'A',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('i'), Symbol('['), Symbol('+'), Symbol('a'),
-                Symbol(']'), Symbol('['), Symbol('-'), Symbol('a'),
-                Symbol(']'), Symbol('A')};
-      },
-  });
-
-  // i → F
-  g.rules.push_back({
-      .predecessor = 'i',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F')};
-      },
-  });
-
-  // F → FF
-  g.rules.push_back({
-      .predecessor = 'F',
-      .successor   = [](std::span<const ParamValue>) -> Word {
-        return {Symbol('F'), Symbol('F')};
-      },
-  });
-
+  g.rules = {
+      ruleFor('a').withLeftContext('F').to("K"),       // F < a → K  (MUST be before default 'a')
+      ruleFor('a').withLeftContext('i').to("a"),       // i < a → a  (MUST be before default 'a')
+      ruleFor('a').to("a"),                            // a → a  (default: stay dormant)
+      ruleFor('A').to("i[+a][-a]A"),                  // active apex grows
+      ruleFor('i').to("F"),                            // immature matures
+      ruleFor('F').to("FF"),                           // mature elongates
+  };
   return g;
 }
 

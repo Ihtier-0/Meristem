@@ -14,5 +14,16 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_AUTOMOC ON)
 
+enable_testing()
+
+# Build all test executables and run them via ctest.
+# Each lib's CMakeLists adds its test exe:  add_dependencies(all_tests <target>)
+add_custom_target(all_tests
+  COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMENT "Running all tests"
+)
+set_target_properties(all_tests PROPERTIES FOLDER "Tests")
+
 add_subdirectory(libs)
 add_subdirectory(apps)

@@ -18,7 +18,7 @@ class StochasticLSystemAlgorithm : public IPlantAlgorithm {
 
   void step() override {
     auto& ss = std::get<StringStructure>(m_structure);
-    ss.derivation = m_grammar.deriveStochastic(ss.derivation, m_rng);
+    ss.derivation = m_grammar.derive(ss.derivation, m_rng);
     ++m_generation;
   }
 
@@ -42,7 +42,7 @@ class StochasticLSystemAlgorithm : public IPlantAlgorithm {
     auto& ss = std::get<StringStructure>(m_structure);
     ss.derivation = m_grammar.axiom;
     for (int i = 0; i < m_generation; ++i)
-      ss.derivation = m_grammar.deriveStochastic(ss.derivation, m_rng);
+      ss.derivation = m_grammar.derive(ss.derivation, m_rng);
   }
 
  private:

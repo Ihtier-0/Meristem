@@ -59,8 +59,8 @@ class TreeCanvas final : public QOpenGLWidget {
   AlgoType algoType() const { return m_algoType; }
   int generation() const;
   int symbolCount() const;
-  double angle() const { return m_angleOverride; }
-  double stepLen() const { return m_stepLen; }
+  double angle() const { return static_cast<double>(m_grammar.angle); }
+  double stepLen() const { return static_cast<double>(m_grammar.stepLen); }
   double zoom() const { return m_zoom; }
   double panX() const { return m_panX; }
   double panY() const { return m_panY; }
@@ -133,8 +133,6 @@ class TreeCanvas final : public QOpenGLWidget {
   Mesh m_mesh;
   Mesh m_flowerMesh;
 
-  float m_angleOverride = 25.f;
-  float m_stepLen = 1.f;
   float m_zoom = 1.f;
   float m_panX = 0.f;
   float m_panY = 0.f;
