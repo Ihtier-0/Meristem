@@ -1,0 +1,12 @@
+#pragma once
+
+// clang-format off
+#define MERISTEM_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define MERISTEM_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define MERISTEM_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+// Packed integer: major*10000 + minor*100 + patch
+// Usage: #if MERISTEM_VERSION >= 10000  // >= 1.0.0
+#define MERISTEM_VERSION       @MERISTEM_VERSION@
+#define MERISTEM_VERSION_STRING "@MERISTEM_VERSION_STRING@"
+// clang-format on
