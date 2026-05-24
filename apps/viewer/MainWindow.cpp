@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
   setCentralWidget(m_canvas);
 
   m_panel        = new ControlPanel(m_canvas, this);
-  m_controlsDock = new QDockWidget("Controls", this);
+  m_controlsDock = new QDockWidget("Properties", this);
   m_controlsDock->setWidget(m_panel);
   m_controlsDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
                               QDockWidget::DockWidgetFloatable);
