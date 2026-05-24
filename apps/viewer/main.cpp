@@ -3,7 +3,7 @@
 #include <QApplication>
 
 #include "MainWindow.h"
-#include "core/version.h"
+#include "core/meristem.h"
 
 int main(int argc, char* argv[]) {
   QApplication app(argc, argv);

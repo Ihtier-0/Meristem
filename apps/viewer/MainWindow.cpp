@@ -7,7 +7,7 @@
 #include "ControlPanel.h"
 #include "SettingsDialog.h"
 #include "TreeCanvas.h"
-#include "core/version.h"
+#include "core/meristem.h"
 
 namespace D {
 

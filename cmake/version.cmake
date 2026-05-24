@@ -5,6 +5,6 @@ set(MERISTEM_VERSION_STRING
   "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 configure_file(
-  "${PROJECT_SOURCE_DIR}/libs/core/include/core/version.h.in"
-  "${PROJECT_BINARY_DIR}/include/core/version.h"
+  "${PROJECT_SOURCE_DIR}/libs/core/include/core/meristem.h.in"
+  "${PROJECT_BINARY_DIR}/include/core/meristem.h"
 )

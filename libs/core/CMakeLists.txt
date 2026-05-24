@@ -3,7 +3,7 @@ set(_headers
   include/core/types.h
 )
 set(_generated
-  "${PROJECT_BINARY_DIR}/include/core/version.h"
+  "${PROJECT_BINARY_DIR}/include/core/meristem.h"
 )
 add_library(core INTERFACE ${_headers} ${_generated})
 target_include_directories(core INTERFACE
