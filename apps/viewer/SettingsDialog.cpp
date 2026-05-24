@@ -41,7 +41,7 @@ QPushButton* colorButton(QColor color, QWidget* parent,
 
 SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
     : QDialog(parent) {
-  setWindowTitle("Settings");
+  setWindowTitle("Preferences");
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
   auto* lay = new QVBoxLayout(this);

@@ -34,8 +34,8 @@ void MainWindow::createMenus() {
 
   auto* edit = menuBar()->addMenu("&Edit");
 
-  auto* settingsAct = edit->addAction("Settings...");
-  connect(settingsAct, &QAction::triggered, this, [this]() {
+  auto* prefsAct = edit->addAction("Preferences...");
+  connect(prefsAct, &QAction::triggered, this, [this]() {
     SettingsDialog dlg(m_canvas, this);
     dlg.exec();
   });
