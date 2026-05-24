@@ -7,7 +7,6 @@ namespace D {
 struct TurtleSymbols {
   char forward = 'F';
   char forwardNoDraw = 'f';
-  char immature = 'i';   // immature stem: draws like forward but shorter
   char turnLeft = '+';
   char turnRight = '-';
   char turnAround = '|';

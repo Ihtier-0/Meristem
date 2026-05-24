@@ -45,10 +45,7 @@ Mesh TurtleBuilder2D::build(const StringStructure& s) {
       float scale = sym.params.empty() ? 1.f
                   : std::visit([](auto v){ return static_cast<float>(v); }, sym.params[0]);
       forward(false, scale);
-    } else if (c == m_symbols.immature) {
-      forward(true, 0.8f); // draw like F but slightly shorter to distinguish visually
-    }
-    else if (c == m_symbols.flower) {
+    } else if (c == m_symbols.flower) {
       // 1. draw a short stem in the current heading (into main mesh)
       float stemLen = m_stepLen * 0.6f;
       float rad0       = radians(state.angle);

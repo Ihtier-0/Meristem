@@ -103,7 +103,6 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   const TurtleSymbols initSym = canvas->symbols();
   auto* edForward    = symbolEdit(initSym.forward,       symPage);
   auto* edForwardND  = symbolEdit(initSym.forwardNoDraw, symPage);
-  auto* edImmature   = symbolEdit(initSym.immature,      symPage);
   auto* edTurnLeft   = symbolEdit(initSym.turnLeft,      symPage);
   auto* edTurnRight  = symbolEdit(initSym.turnRight,     symPage);
   auto* edTurnAround = symbolEdit(initSym.turnAround,    symPage);
@@ -113,7 +112,6 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
 
   symForm->addRow("Forward (draw):",     edForward);
   symForm->addRow("Forward (no draw):",  edForwardND);
-  symForm->addRow("Immature stem:",      edImmature);
   symForm->addRow("Turn left:",          edTurnLeft);
   symForm->addRow("Turn right:",         edTurnRight);
   symForm->addRow("Turn around (180°):", edTurnAround);
@@ -130,7 +128,6 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
     TurtleSymbols s;
     s.forward       = ch(edForward,    initSym.forward);
     s.forwardNoDraw = ch(edForwardND,  initSym.forwardNoDraw);
-    s.immature      = ch(edImmature,   initSym.immature);
     s.turnLeft      = ch(edTurnLeft,   initSym.turnLeft);
     s.turnRight     = ch(edTurnRight,  initSym.turnRight);
     s.turnAround    = ch(edTurnAround, initSym.turnAround);
@@ -140,7 +137,7 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
     canvas->setSymbols(s);
   };
 
-  for (auto* ed : {edForward, edForwardND, edImmature, edTurnLeft,
+  for (auto* ed : {edForward, edForwardND, edTurnLeft,
                    edTurnRight, edTurnAround, edPush, edPop, edFlower}) {
     QObject::connect(ed, &QLineEdit::textChanged,
                      symPage, [applySymbols](const QString&) { applySymbols(); });
