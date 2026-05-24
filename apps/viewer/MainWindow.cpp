@@ -12,7 +12,7 @@
 namespace D {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-  setWindowTitle(QString("Meristem v") + MERISTEM_VERSION_STRING);
+  setWindowTitle(QString(MERISTEM_PROJECT_NAME) + " v" + MERISTEM_VERSION_STRING);
   resize(1280, 720);
 
   m_canvas = new TreeCanvas(this);
@@ -46,10 +46,10 @@ void MainWindow::createMenus() {
 
   auto* aboutAct = help->addAction("About Meristem");
   connect(aboutAct, &QAction::triggered, this, [this]() {
-    QMessageBox::about(this, "About Meristem",
-        QString("<b>Meristem</b> v%1<br><br>"
+    QMessageBox::about(this, QString("About ") + MERISTEM_PROJECT_NAME,
+        QString("<b>%1</b> v%2<br><br>"
                 "L-system plant modelling framework.")
-            .arg(MERISTEM_VERSION_STRING));
+            .arg(MERISTEM_PROJECT_NAME).arg(MERISTEM_VERSION_STRING));
   });
 }
 
