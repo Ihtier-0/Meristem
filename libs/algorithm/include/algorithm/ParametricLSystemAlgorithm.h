@@ -124,27 +124,26 @@ class ParametricLSystemAlgorithm : public IPlantAlgorithm {
       : m_axiom(std::move(axiom)),
         m_rules(std::move(rules)),
         m_angle(angle),
-        m_structure(StringStructure{m_axiom}) {}
+        m_structure{m_axiom} {}
 
   ParametricLSystemAlgorithm(const ParametricLSystemAlgorithm& o)
       : m_axiom(o.m_axiom), m_rules(o.m_rules), m_angle(o.m_angle),
-        m_structure(StringStructure{m_axiom}), m_generation(0) {}
+        m_structure{m_axiom}, m_generation(0) {}
 
   ParametricLSystemAlgorithm(ParametricLSystemAlgorithm&&) = default;
 
   void step() override {
-    auto& ss = std::get<StringStructure>(m_structure);
-    ss.derivation = derive(ss.derivation);
+    m_structure.derivation = derive(m_structure.derivation);
     ++m_generation;
   }
 
   void reset() override {
-    std::get<StringStructure>(m_structure).derivation = m_axiom;
+    m_structure.derivation = m_axiom;
     m_generation = 0;
   }
 
   int generation() const override { return m_generation; }
-  const PlantStructure& getStructure() const override { return m_structure; }
+  const StringStructure& getStructure() const override { return m_structure; }
 
   float angle() const { return m_angle; }
   const Word& axiomWord() const { return m_axiom; }
@@ -153,19 +152,18 @@ class ParametricLSystemAlgorithm : public IPlantAlgorithm {
 
   void setGlobalParams(std::map<std::string, float> params) {
     m_globalParams = std::move(params);
-    auto& ss = std::get<StringStructure>(m_structure);
-    ss.derivation = m_axiom;
+    m_structure.derivation = m_axiom;
     for (int i = 0; i < m_generation; ++i)
-      ss.derivation = derive(ss.derivation);
+      m_structure.derivation = derive(m_structure.derivation);
   }
 
  private:
-  Word m_axiom;
-  std::vector<PRule> m_rules;
-  float m_angle;
-  PlantStructure m_structure;
-  int m_generation = 0;
-  std::map<std::string, float> m_globalParams;
+  Word                          m_axiom;
+  std::vector<PRule>            m_rules;
+  float                         m_angle;
+  StringStructure               m_structure;
+  int                           m_generation = 0;
+  std::map<std::string, float>  m_globalParams;
 
   Word derive(const Word& current) const {
     Word result;

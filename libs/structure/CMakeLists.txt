@@ -1,7 +1,5 @@
 set(_headers
-  include/structure/PlantStructure.h
   include/structure/StringStructure.h
-  include/structure/TreeGraph.h
 )
 add_library(structure INTERFACE ${_headers})
 target_include_directories(structure INTERFACE include)

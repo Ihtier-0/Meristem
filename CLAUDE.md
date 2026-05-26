@@ -39,7 +39,7 @@ libs/
   core/         include/core/types.h         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  include/environment/         — IEnvironment, EnvironmentSample
   grammar/      include/grammar/             — Rule, LSystemGrammar
-  structure/    include/structure/           — StringStructure, TreeGraph, PlantStructure
+  structure/    include/structure/           — StringStructure
   algorithm/    include/algorithm/           — IPlantAlgorithm
   geometry/     include/geometry/            — Mesh, IGeometryBuilder
   renderer/     include/renderer/            — DrawCall, IRenderer
@@ -60,21 +60,8 @@ geometry ← renderer ← viewer
 ## Pipeline
 
 ```
-IPlantAlgorithm -> PlantStructure (variant) -> IGeometryBuilder -> Mesh -> IRenderer
+IPlantAlgorithm -> StringStructure -> IGeometryBuilder -> Mesh -> IRenderer
 ```
-
-`PlantStructure = std::variant<StringStructure, TreeGraph>`
-
-**No virtual methods on structure types.** Dispatch via free function:
-
-```cpp
-inline Mesh buildMesh(IGeometryBuilder& builder, const PlantStructure& structure) {
-  return std::visit([&](const auto& s) { return builder.build(s); }, structure);
-}
-```
-
-Why variant over virtual: avoids circular header dependency between `structure`
-and `geometry` (IGeometryBuilder would need to know structure types and vice versa).
 
 ---
 
@@ -86,13 +73,12 @@ class IPlantAlgorithm {
   virtual void step() = 0;
   virtual void reset() = 0;
   virtual int generation() const = 0;
-  virtual const PlantStructure& getStructure() const = 0;
+  virtual const StringStructure& getStructure() const = 0;
 };
 
 // geometry/IGeometryBuilder.h
 class IGeometryBuilder {
   virtual Mesh build(const StringStructure&) = 0;
-  virtual Mesh build(const TreeGraph&) = 0;
 };
 
 // renderer/IRenderer.h
@@ -221,7 +207,7 @@ v0.1  D0L + TurtleBuilder2D + OpenGL viewer ✅
 v0.2  Stochastic + parametric L-systems
 v0.3  Node editor (imnodes), runtime rule editing
 v0.4  Context-sensitive (2L) + tropisms
-v0.5  Space Colonization Algorithm (TreeGraph pipeline)
+v0.5  Space Colonization Algorithm
 v1.0  OBJ/GLTF export, stable API
 v1.x  Table L-systems (T0L), differential L-systems (dL)
 v2.x  MoonrayGLRenderer (Moonray interactive GL viewport)

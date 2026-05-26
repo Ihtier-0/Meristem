@@ -15,18 +15,15 @@ Primary algorithm: L-systems (Lindenmayer systems). More algorithms to follow.
 ## Architecture
 
 ```
-IPlantAlgorithm -> PlantStructure -> IGeometryBuilder -> Mesh -> IRenderer
+IPlantAlgorithm -> StringStructure -> IGeometryBuilder -> Mesh -> IRenderer
 ```
-
-`PlantStructure = std::variant<StringStructure, TreeGraph>` — dispatched via `std::visit`.  
-No virtual methods on structure types, eliminating circular header dependencies.
 
 ```
 libs/
   core/         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  — IEnvironment, EnvironmentSample
   grammar/      — Rule, LSystemGrammar
-  structure/    — StringStructure, TreeGraph, PlantStructure
+  structure/    — StringStructure
   algorithm/    — IPlantAlgorithm, D0LSystemAlgorithm
   geometry/     — Mesh, IGeometryBuilder, TurtleBuilder2D
   renderer/     — DrawCall, IRenderer, OpenGLRenderer

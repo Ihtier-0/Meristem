@@ -13,18 +13,15 @@
 ## Архитектура
 
 ```
-IPlantAlgorithm -> PlantStructure -> IGeometryBuilder -> Mesh -> IRenderer
+IPlantAlgorithm -> StringStructure -> IGeometryBuilder -> Mesh -> IRenderer
 ```
-
-Структура результата — `std::variant<StringStructure, TreeGraph>`, диспетчеризация через `std::visit`.  
-Нет виртуальных методов на структурных типах — исключены циклические зависимости заголовков.
 
 ```
 libs/
   core/         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  — IEnvironment, EnvironmentSample
   grammar/      — Rule, LSystemGrammar
-  structure/    — StringStructure, TreeGraph, PlantStructure
+  structure/    — StringStructure
   algorithm/    — IPlantAlgorithm, D0LSystemAlgorithm
   geometry/     — Mesh, IGeometryBuilder, TurtleBuilder2D
   renderer/     — DrawCall, IRenderer, OpenGLRenderer
