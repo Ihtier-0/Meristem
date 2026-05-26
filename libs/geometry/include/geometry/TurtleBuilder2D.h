@@ -31,7 +31,7 @@ class TurtleBuilder2D : public IGeometryBuilder {
   const TurtleSymbols& symbols()     const { return m_symbols; }
   const Mesh&          lastFlowerMesh() const { return m_lastFlowers; }
 
-  Mesh build(const StringStructure& s) override;
+  Mesh build(const Word& word) override;
 
  private:
   struct State {

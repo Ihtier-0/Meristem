@@ -7,6 +7,6 @@ set(_headers
 )
 add_library(algorithm INTERFACE ${_headers})
 target_include_directories(algorithm INTERFACE include)
-target_link_libraries(algorithm INTERFACE grammar structure environment)
+target_link_libraries(algorithm INTERFACE grammar environment)
 set_target_properties(algorithm PROPERTIES FOLDER "Meristem")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${_headers})

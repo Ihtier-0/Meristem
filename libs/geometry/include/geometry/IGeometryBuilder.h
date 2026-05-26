@@ -1,7 +1,7 @@
 #pragma once
 
+#include "core/types.h"
 #include "geometry/Mesh.h"
-#include "structure/StringStructure.h"
 
 namespace D {
 
@@ -9,7 +9,7 @@ class IGeometryBuilder {
  public:
   virtual ~IGeometryBuilder() = default;
 
-  virtual Mesh build(const StringStructure&) = 0;
+  virtual Mesh build(const Word&) = 0;
 };
 
 }  // namespace D

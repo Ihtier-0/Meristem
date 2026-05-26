@@ -39,7 +39,6 @@ libs/
   core/         include/core/types.h         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  include/environment/         — IEnvironment, EnvironmentSample
   grammar/      include/grammar/             — Rule, LSystemGrammar
-  structure/    include/structure/           — StringStructure
   algorithm/    include/algorithm/           — IPlantAlgorithm
   geometry/     include/geometry/            — Mesh, IGeometryBuilder
   renderer/     include/renderer/            — DrawCall, IRenderer
@@ -73,12 +72,12 @@ class IPlantAlgorithm {
   virtual void step() = 0;
   virtual void reset() = 0;
   virtual int generation() const = 0;
-  virtual const StringStructure& getStructure() const = 0;
+  virtual const Word& current() const = 0;
 };
 
 // geometry/IGeometryBuilder.h
 class IGeometryBuilder {
-  virtual Mesh build(const StringStructure&) = 0;
+  virtual Mesh build(const Word&) = 0;
 };
 
 // renderer/IRenderer.h

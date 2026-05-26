@@ -3,18 +3,17 @@
 #include <cmath>
 #include <numbers>
 #include <stack>
-#include <variant>
 
 namespace D {
 
-Mesh TurtleBuilder2D::build(const StringStructure& s) {
+Mesh TurtleBuilder2D::build(const Word& word) {
   Mesh mesh;
   mesh.mode = PrimitiveMode::Lines;
 
   m_lastFlowers = Mesh{};
   m_lastFlowers.mode = PrimitiveMode::Lines;
-  mesh.positions.reserve(s.derivation.size() * 2);
-  mesh.indices.reserve(s.derivation.size() * 2);
+  mesh.positions.reserve(word.size() * 2);
+  mesh.indices.reserve(word.size() * 2);
 
   State state{.pos = {0.f, 0.f}, .angle = 90.f};
   std::stack<State> stack;
@@ -35,7 +34,7 @@ Mesh TurtleBuilder2D::build(const StringStructure& s) {
     state.pos = next;
   };
 
-  for (const Symbol& sym : s.derivation) {
+  for (const Symbol& sym : word) {
     const char c = sym.letter;
     if (c == m_symbols.forward) {
       float scale = sym.params.empty() ? 1.f

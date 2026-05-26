@@ -21,7 +21,6 @@ libs/
   core/         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  — IEnvironment, EnvironmentSample
   grammar/      — Rule, LSystemGrammar
-  structure/    — StringStructure
   algorithm/    — IPlantAlgorithm, D0LSystemAlgorithm
   geometry/     — Mesh, IGeometryBuilder, TurtleBuilder2D
   renderer/     — DrawCall, IRenderer, OpenGLRenderer

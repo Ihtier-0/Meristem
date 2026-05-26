@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structure/StringStructure.h"
+#include "core/types.h"
 
 namespace D {
 
@@ -11,7 +11,7 @@ class IPlantAlgorithm {
   virtual void step() = 0;
   virtual void reset() = 0;
   virtual int generation() const = 0;
-  virtual const StringStructure& getStructure() const = 0;
+  virtual const Word& current() const = 0;
 };
 
 }  // namespace D

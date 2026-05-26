@@ -14,7 +14,6 @@
 #include <spdlog/spdlog.h>
 
 #include "examples.h"
-#include "structure/StringStructure.h"
 
 namespace D {
 
@@ -86,7 +85,7 @@ void TreeCanvas::initLSystem() {
   m_turtle.setAngle(m_angle);
   m_turtle.setStep(m_stepLen);
   m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-  m_mesh = m_turtle.build(m_algo->getStructure());
+  m_mesh = m_turtle.build(m_algo->current());
   populateGrammarBuffers();
 }
 
@@ -203,7 +202,7 @@ TreeCanvas::ContextEdit TreeCanvas::contextEdit() const {
 
 int TreeCanvas::symbolCount() const {
   if (!m_algo) return 0;
-  return static_cast<int>(m_algo->getStructure().derivation.size());
+  return static_cast<int>(m_algo->current().size());
 }
 
 QColor TreeCanvas::lineColor() const { return toQColor(m_lineColor); }
@@ -216,7 +215,7 @@ void TreeCanvas::rebuildMesh() {
   m_turtle.setAngle(m_angle);
   m_turtle.setStep(m_stepLen);
   m_turtle.setFlowerRadius(m_flowerRadius);
-  m_mesh = m_turtle.build(m_algo->getStructure());
+  m_mesh = m_turtle.build(m_algo->current());
   m_flowerMesh = m_turtle.lastFlowerMesh();
   if (m_renderer) {
     m_renderer->setZoom(m_zoom);
@@ -225,7 +224,7 @@ void TreeCanvas::rebuildMesh() {
   spdlog::debug("[Mesh] {} vertices, {} segments",
                m_mesh.positions.size(), m_mesh.indices.size() / 2);
   if (spdlog::should_log(spdlog::level::debug)) {
-    spdlog::debug("[L-System] String: {}", D::str(m_algo->getStructure().derivation));
+    spdlog::debug("[L-System] String: {}", D::str(m_algo->current()));
   }
   emit stateChanged(generation(), symbolCount());
   update();
