@@ -269,6 +269,10 @@ void TreeCanvas::switchAlgo(int typeInt) {
       m_grammar = examples::contextSensitiveFlower();
       m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
       break;
+    case AlgoType::ContextFlower:
+      m_grammar = examples::contextFlower();
+      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
+      break;
     case AlgoType::Parametric: {
       auto pa = examples::parametricTree();
       m_angle = pa.angle();

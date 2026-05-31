@@ -35,6 +35,35 @@ inline LSystemGrammar stochasticPlant() {
   return g;
 }
 
+// Context-sensitive extension of binaryTree(), delta = 25 deg.
+// Adds symbol K (flower). One context rule:
+//   F < A -> K   apex A becomes a flower when a mature stem F is to its left
+//   A -> F[+A][-A]   default branching (no context match)
+//   F -> FF
+//
+// Derivation:
+//   Step 0: A
+//   Step 1: F[+A][-A]          A has no F to its left -> default fires
+//   Step 2: FF[+K][-K]         both A's have F as left context -> K
+//   Step 3: FFFF[+K][-K]       K is terminal (no rule); stems keep growing
+//
+// From the third iteration onward branch tips carry K, modelling
+// bottom-up flowering signal propagation (article fig. 4).
+inline LSystemGrammar contextFlower() {
+  LSystemGrammar g;
+
+  g.axiom = w("A");
+  g.ignore = "+-";
+  g.push = '[';
+  g.pop = ']';
+  g.rules = {
+      ruleFor('A').withLeftContext('F').to("K"),  // F < A -> K  (before default)
+      ruleFor('A').to("F[+A][-A]"),               // default branching
+      ruleFor('F').to("FF"),
+  };
+  return g;
+}
+
 // Context-sensitive (1L): classic ABP fractal plant with one context rule.
 // Base rule:    X -> F+[[X]-X]-F[-FX]+X   (left-leaning sub-tree)
 // Context rule: F < X -> F-[[X]+X]+F[+FX]-X  (X after F: mirrored sub-tree)

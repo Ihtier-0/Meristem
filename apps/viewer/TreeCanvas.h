@@ -31,7 +31,8 @@ class TreeCanvas final : public QOpenGLWidget {
     ContextSensitive,
     ContextSensitive2L,
     Parametric,
-    ContextSensitiveFlower
+    ContextSensitiveFlower,
+    ContextFlower,
   };
 
   struct RuleEdit {

@@ -17,7 +17,8 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
 
   m_algoCombo = new QComboBox;
   m_algoCombo->addItems({"D0L (deterministic)", "Stochastic", "Context-sensitive (1L)",
-                         "Context-sensitive (2L)", "Parametric", "Context-sensitive (flower K)"});
+                         "Context-sensitive (2L)", "Parametric", "Context-sensitive (flower K)",
+                         "Context-sensitive (flower, article)"});
   m_algoCombo->setCurrentIndex(static_cast<int>(canvas->algoType()));
   lay->addWidget(m_algoCombo);
 
