@@ -298,7 +298,7 @@ void GrammarWidget::rebuildParamDefRows() {
 
 void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   NormalRuleRow row;
-  row.widget = new QWidget;
+  row.widget = new QWidget(m_rulesWidget);
   auto* hlay = new QHBoxLayout(row.widget);
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
@@ -363,7 +363,7 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
 
 void GrammarWidget::addParamRuleRow(const TreeCanvas::ParametricEdit& pe) {
   ParamRuleRow row;
-  row.widget = new QWidget;
+  row.widget = new QWidget(m_paramRulesWidget);
   auto* hlay = new QHBoxLayout(row.widget);
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
@@ -399,7 +399,7 @@ void GrammarWidget::addParamRuleRow(const TreeCanvas::ParametricEdit& pe) {
 
 void GrammarWidget::addParamDefRow(const TreeCanvas::ParamDef& pd) {
   ParamDefRow row;
-  row.widget = new QWidget;
+  row.widget = new QWidget(m_paramDefsWidget);
   auto* hlay = new QHBoxLayout(row.widget);
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
