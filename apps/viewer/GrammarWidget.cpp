@@ -176,8 +176,6 @@ void GrammarWidget::onAlgoSwitched(int typeInt) {
                     type == TreeCanvas::AlgoType::ContextSensitive2L ||
                     type == TreeCanvas::AlgoType::ContextFlower);
 
-  setUpdatesEnabled(false);
-
   m_grammarStack->setCurrentIndex(isParam ? 1 : 0);
 
   if (isParam) {
@@ -204,8 +202,6 @@ void GrammarWidget::onAlgoSwitched(int typeInt) {
       m_strictModeCheck->setChecked(ce.strictMode);
     }
   }
-
-  setUpdatesEnabled(true);
 }
 
 void GrammarWidget::onApplyClicked() {
