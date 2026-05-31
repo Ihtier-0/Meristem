@@ -17,16 +17,20 @@ inline LSystemGrammar binaryTree() {
   return g;
 }
 
-// Stochastic plant: F has two competing productions (p=0.6 / p=0.4), delta = 25 deg
-//   F -p0.6-> F[+F]F[-F]F
-//   F -p0.4-> F[+F]F
+// Stochastic extension of binaryTree(), delta = 25 deg.
+// Rule for A replaced by two competing productions:
+//   A -p0.6-> F[+A][-A]   standard symmetric branching
+//   A -p0.4-> F[+A]        only left branch (asymmetric)
+// Rule F -> FF is kept. Different RNG seeds produce different bush shapes,
+// demonstrating stochastic L-systems as a source of morphological variation.
 inline LSystemGrammar stochasticPlant() {
   LSystemGrammar g;
 
-  g.axiom = w("F");
+  g.axiom = w("A");
   g.rules = {
-      ruleFor('F').to("F[+F]F[-F]F").withProbability(0.6f),
-      ruleFor('F').to("F[+F]F").withProbability(0.4f),
+      ruleFor('A').to("F[+A][-A]").withProbability(0.6f),
+      ruleFor('A').to("F[+A]").withProbability(0.4f),
+      ruleFor('F').to("FF"),
   };
   return g;
 }
