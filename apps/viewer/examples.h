@@ -115,47 +115,6 @@ inline LSystemGrammar contextSensitive2LPlant() {
   return g;
 }
 
-// Context-sensitive flower: true bottom-up signal propagation.
-//
-// Alphabet:
-//   A  — active growing apex (main axis)
-//   a  — dormant lateral bud (waits until parent stem matures)
-//   i  — immature stem segment (matures to F in one step)
-//   F  — mature stem
-//   K  — flower (terminal)
-//
-// Rules (priority order matters):
-//   F < a -> K     context: dormant bud sees mature parent -> flower
-//   i < a -> a     context: dormant bud sees immature parent -> stays dormant
-//   a   -> a       default: dormant stays dormant
-//   A   -> i[+a][-a]A   active apex grows: immature stem + 2 dormant lateral buds + continues
-//   i   -> F       immature matures
-//   F   -> FF      mature elongates
-//
-// Step 0: A
-// Step 1: i[+a][-a]A          — immature stem, buds dormant
-// Step 2: F[+a][-a]i[+a][-a]A — base mature; bottom buds still next to old i (now F), wait...
-//   actually bottom buds NOW see F -> K on step 3
-// Step 3: first flowers at bottom level; next level buds still dormant
-// Step 4: next level flowers — propagation goes bottom to top
-inline LSystemGrammar contextSensitiveFlower() {
-  LSystemGrammar g;
-
-  g.axiom = w("A");
-  g.ignore = "+-|";
-  g.push = '[';
-  g.pop = ']';
-  g.rules = {
-      ruleFor('a').withLeftContext('F').to("K"),  // F < a -> K  (MUST be before default 'a')
-      ruleFor('a').withLeftContext('i').to("a"),  // i < a -> a  (MUST be before default 'a')
-      ruleFor('a').to("a"),                       // a -> a  (default: stay dormant)
-      ruleFor('A').to("i[+a][-a]A"),              // active apex grows
-      ruleFor('i').to("F"),                       // immature matures
-      ruleFor('F').to("FF"),                      // mature elongates
-  };
-  return g;
-}
-
 // Parametric: A(s) -> F(s)[+A(s*r)][-A(s*r)]
 // Each recursive branch is r-times shorter — natural tapering tree.
 // Global param r=0.7 (adjustable via slider). Press Step 6-7 times.

@@ -155,7 +155,6 @@ GrammarWidget::GrammarWidget(TreeCanvas* canvas, QWidget* parent)
 
   bool isContext = (canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive ||
                     canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive2L ||
-                    canvas->algoType() == TreeCanvas::AlgoType::ContextSensitiveFlower ||
                     canvas->algoType() == TreeCanvas::AlgoType::ContextFlower);
   m_contextWidget->setVisible(isContext);
   if (isContext) {
@@ -175,7 +174,6 @@ void GrammarWidget::onAlgoSwitched(int typeInt) {
   bool isParam = (type == TreeCanvas::AlgoType::Parametric);
   bool isContext = (type == TreeCanvas::AlgoType::ContextSensitive ||
                     type == TreeCanvas::AlgoType::ContextSensitive2L ||
-                    type == TreeCanvas::AlgoType::ContextSensitiveFlower ||
                     type == TreeCanvas::AlgoType::ContextFlower);
 
   m_grammarStack->setCurrentIndex(isParam ? 1 : 0);
@@ -303,7 +301,6 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
 
   bool isContext = (m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive ||
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitive2L ||
-                    m_canvas->algoType() == TreeCanvas::AlgoType::ContextSensitiveFlower ||
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextFlower);
   bool isStoch = (m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
 

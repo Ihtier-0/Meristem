@@ -265,10 +265,6 @@ void TreeCanvas::switchAlgo(int typeInt) {
       m_grammar = examples::contextSensitive2LPlant();
       m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
       break;
-    case AlgoType::ContextSensitiveFlower:
-      m_grammar = examples::contextSensitiveFlower();
-      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-      break;
     case AlgoType::ContextFlower:
       m_grammar = examples::contextFlower();
       m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
