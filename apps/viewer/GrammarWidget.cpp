@@ -308,31 +308,31 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextFlower);
   bool isStoch = (m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
 
-  row.leftCtx = new QLineEdit(re.leftContext[0] ? QString(re.leftContext[0]) : "");
+  row.leftCtx = new QLineEdit(re.leftContext[0] ? QString(re.leftContext[0]) : "", row.widget);
   row.leftCtx->setPlaceholderText("lc");
   row.leftCtx->setFixedWidth(24);
   row.leftCtx->setVisible(isContext);
   hlay->addWidget(row.leftCtx);
-  if (isContext) hlay->addWidget(new QLabel("<"));
+  if (isContext) hlay->addWidget(new QLabel("<", row.widget));
 
-  row.pred = new QLineEdit(re.predecessor[0] ? QString(re.predecessor[0]) : "");
+  row.pred = new QLineEdit(re.predecessor[0] ? QString(re.predecessor[0]) : "", row.widget);
   row.pred->setFixedWidth(20);
   hlay->addWidget(row.pred);
 
-  row.rightCtx = new QLineEdit(re.rightContext[0] ? QString(re.rightContext[0]) : "");
+  row.rightCtx = new QLineEdit(re.rightContext[0] ? QString(re.rightContext[0]) : "", row.widget);
   row.rightCtx->setPlaceholderText("rc");
   row.rightCtx->setFixedWidth(24);
   row.rightCtx->setVisible(isContext);
   if (isContext) {
-    hlay->addWidget(new QLabel(">"));
+    hlay->addWidget(new QLabel(">", row.widget));
     hlay->addWidget(row.rightCtx);
   }
 
-  hlay->addWidget(new QLabel("->"));
-  row.succ = new QLineEdit(re.successor);
+  hlay->addWidget(new QLabel("->", row.widget));
+  row.succ = new QLineEdit(re.successor, row.widget);
   hlay->addWidget(row.succ);
 
-  row.prob = new QDoubleSpinBox;
+  row.prob = new QDoubleSpinBox(row.widget);
   row.prob->setRange(0.0, 1.0);
   row.prob->setSingleStep(0.05);
   row.prob->setDecimals(2);
@@ -342,7 +342,7 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   row.prob->setVisible(isStoch);
   hlay->addWidget(row.prob);
 
-  auto* delBtn = new QPushButton("✕");
+  auto* delBtn = new QPushButton("✕", row.widget);
   delBtn->setFixedWidth(24);
   hlay->addWidget(delBtn);
 
@@ -368,18 +368,18 @@ void GrammarWidget::addParamRuleRow(const TreeCanvas::ParametricEdit& pe) {
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
 
-  row.pred = new QLineEdit(pe.predecessor[0] ? QString(pe.predecessor[0]) : "");
+  row.pred = new QLineEdit(pe.predecessor[0] ? QString(pe.predecessor[0]) : "", row.widget);
   row.pred->setFixedWidth(18);
   hlay->addWidget(row.pred);
-  hlay->addWidget(new QLabel("("));
-  row.params = new QLineEdit(pe.paramNames);
+  hlay->addWidget(new QLabel("(", row.widget));
+  row.params = new QLineEdit(pe.paramNames, row.widget);
   row.params->setFixedWidth(40);
   hlay->addWidget(row.params);
-  hlay->addWidget(new QLabel(")->"));
-  row.expr = new QLineEdit(pe.successorExpr);
+  hlay->addWidget(new QLabel(")->", row.widget));
+  row.expr = new QLineEdit(pe.successorExpr, row.widget);
   hlay->addWidget(row.expr);
 
-  auto* delBtn = new QPushButton("✕");
+  auto* delBtn = new QPushButton("✕", row.widget);
   delBtn->setFixedWidth(24);
   hlay->addWidget(delBtn);
 
@@ -404,18 +404,18 @@ void GrammarWidget::addParamDefRow(const TreeCanvas::ParamDef& pd) {
   hlay->setContentsMargins(0, 0, 0, 0);
   hlay->setSpacing(2);
 
-  row.name = new QLineEdit(pd.name);
+  row.name = new QLineEdit(pd.name, row.widget);
   row.name->setFixedWidth(50);
   hlay->addWidget(row.name);
-  hlay->addWidget(new QLabel("="));
-  row.value = new QDoubleSpinBox;
+  hlay->addWidget(new QLabel("=", row.widget));
+  row.value = new QDoubleSpinBox(row.widget);
   row.value->setRange(0.01, 10.0);
   row.value->setSingleStep(0.01);
   row.value->setDecimals(3);
   row.value->setValue(static_cast<double>(pd.value));
   hlay->addWidget(row.value);
 
-  auto* delBtn = new QPushButton("✕");
+  auto* delBtn = new QPushButton("✕", row.widget);
   delBtn->setFixedWidth(24);
   hlay->addWidget(delBtn);
 
