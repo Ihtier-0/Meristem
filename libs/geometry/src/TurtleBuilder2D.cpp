@@ -11,7 +11,7 @@ Mesh TurtleBuilder2D::build(const Word& word) {
   mesh.mode = PrimitiveMode::Lines;
 
   m_lastFlowers = Mesh{};
-  m_lastFlowers.mode = PrimitiveMode::Lines;
+  m_lastFlowers.mode = PrimitiveMode::Triangles;
   mesh.positions.reserve(word.size() * 2);
   mesh.indices.reserve(word.size() * 2);
 
@@ -56,19 +56,24 @@ Mesh TurtleBuilder2D::build(const Word& word) {
         mesh.indices.push_back(base);
         mesh.indices.push_back(base + 1);
       }
-      // 2. draw circle approximation into flower mesh
+      // 2. draw a filled disc into the flower mesh as a triangle fan:
+      //    one center vertex + a ring of kFlowerSegments vertices, with each
+      //    triangle (center, ring[k], ring[k+1]) covering one segment.
       const float r = m_flowerRadius;
       const float step = 2.f * std::numbers::pi_v<float> / kFlowerSegments;
+      auto center = static_cast<uint32_t>(m_lastFlowers.positions.size());
+      m_lastFlowers.positions.push_back({flowerPos.x, flowerPos.y, 0.f});
       for (int k = 0; k < kFlowerSegments; ++k) {
-        float a0 = step * k;
-        float a1 = step * (k + 1);
-        Vec2 p0 = flowerPos + Vec2{std::cos(a0), std::sin(a0)} * r;
-        Vec2 p1 = flowerPos + Vec2{std::cos(a1), std::sin(a1)} * r;
-        auto base = static_cast<uint32_t>(m_lastFlowers.positions.size());
-        m_lastFlowers.positions.push_back({p0.x, p0.y, 0.f});
-        m_lastFlowers.positions.push_back({p1.x, p1.y, 0.f});
-        m_lastFlowers.indices.push_back(base);
-        m_lastFlowers.indices.push_back(base + 1);
+        float a = step * k;
+        Vec2 p = flowerPos + Vec2{std::cos(a), std::sin(a)} * r;
+        m_lastFlowers.positions.push_back({p.x, p.y, 0.f});
+      }
+      for (int k = 0; k < kFlowerSegments; ++k) {
+        uint32_t cur = center + 1 + static_cast<uint32_t>(k);
+        uint32_t nxt = center + 1 + static_cast<uint32_t>((k + 1) % kFlowerSegments);
+        m_lastFlowers.indices.push_back(center);
+        m_lastFlowers.indices.push_back(cur);
+        m_lastFlowers.indices.push_back(nxt);
       }
       state.pos = flowerPos;
     }
