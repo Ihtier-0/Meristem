@@ -14,6 +14,8 @@ class ControlPanel final : public QScrollArea {
  public:
   explicit ControlPanel(TreeCanvas* canvas, QWidget* parent = nullptr);
 
+  LSystemWidget* lsystemWidget() const { return m_lsystem; }
+
  private:
   LSystemWidget* m_lsystem = nullptr;
   GrammarWidget* m_grammar = nullptr;

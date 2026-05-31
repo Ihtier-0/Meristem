@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QOpenGLWidget>
 #include <QPoint>
+#include <QString>
 
 #include "algorithm/D0LSystemAlgorithm.h"
 #include "algorithm/IPlantAlgorithm.h"
@@ -88,6 +89,17 @@ class TreeCanvas final : public QOpenGLWidget {
   const std::vector<ParamDef>& paramDefs() const { return m_paramDefs; }
   ContextEdit contextEdit() const;
 
+  // ── Document model ────────────────────────────────────────────────────────────
+  // The "document" is the plant STRUCTURE the user is editing. It has a display
+  // name (e.g. "NewTree.dt"), an optional on-disk path, a dirty flag, and a
+  // "custom" flag (true when it no longer matches a named built-in preset).
+  QString documentName() const { return m_docName; }
+  QString documentPath() const { return m_docPath; }  // empty if never saved to disk
+  bool isModified() const { return m_dirty; }
+  bool isCustomDocument() const { return m_custom; }
+  // Record a new document identity (used after open/save/preset load).
+  void setDocumentState(const QString& name, const QString& path, bool dirty, bool custom);
+
  public slots:
   void stepGeneration();
   void resetGeneration();
@@ -123,6 +135,7 @@ class TreeCanvas final : public QOpenGLWidget {
   void stateChanged(int generation, int symbols);
   void algoSwitched(int typeInt);
   void viewChanged(double zoom, double panX, double panY);
+  void documentChanged();  // name, dirty, or custom flag changed
 
  protected:
   void initializeGL() override;
@@ -138,6 +151,7 @@ class TreeCanvas final : public QOpenGLWidget {
   void initLSystem();
   void rebuildMesh();
   void populateGrammarBuffers();
+  void markDirty();  // flag the document modified+custom (no-op while loading)
 
   std::unique_ptr<OpenGLRenderer> m_renderer;
 
@@ -171,6 +185,13 @@ class TreeCanvas final : public QOpenGLWidget {
   char m_paramAxiomBuf[256]{};
   std::vector<ParametricEdit> m_paramRuleEdits;
   std::vector<ParamDef> m_paramDefs;
+
+  // Document model.
+  QString m_docName = "NewTree.dt";
+  QString m_docPath;            // empty until saved/opened from disk
+  bool m_dirty = false;
+  bool m_custom = true;         // true = not a pristine named preset
+  bool m_loading = false;       // guard: suppress markDirty during load
 };
 
 }  // namespace D

@@ -16,10 +16,14 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
   lay->setSpacing(4);
 
   m_algoCombo = new QComboBox;
+  // Indices 0..5 map to TreeCanvas::AlgoType presets; the trailing "Custom"
+  // item (kCustomIndex) represents an edited or loaded-from-file document that
+  // no longer matches a named preset.
   m_algoCombo->addItems({"D0L (deterministic)", "Stochastic", "Context-sensitive (1L)",
                          "Context-sensitive (2L)", "Parametric",
-                         "Context-sensitive (flower)"});
-  m_algoCombo->setCurrentIndex(static_cast<int>(canvas->algoType()));
+                         "Context-sensitive (flower)", "Custom"});
+  m_algoCombo->setCurrentIndex(canvas->isCustomDocument() ? kCustomIndex
+                                                          : static_cast<int>(canvas->algoType()));
   lay->addWidget(m_algoCombo);
 
   m_seedRow = new QWidget;
@@ -60,7 +64,13 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
   btnLay->addWidget(resetBtn);
   lay->addWidget(btnRow);
 
-  connect(m_algoCombo, &QComboBox::currentIndexChanged, canvas, &TreeCanvas::switchAlgo);
+  // Use activated() (user action only) rather than currentIndexChanged() so
+  // programmatic resyncs don't trigger a preset switch. The request is routed
+  // to MainWindow, which prompts to save a dirty document before switching.
+  connect(m_algoCombo, &QComboBox::activated, this, [this](int idx) {
+    if (idx == kCustomIndex) { resyncCombo(); return; }  // "Custom" is not selectable
+    emit presetRequested(idx);
+  });
   connect(m_seedSpin, &QSpinBox::valueChanged, canvas, &TreeCanvas::setSeed);
   connect(m_angleSpin, &QDoubleSpinBox::valueChanged, canvas, &TreeCanvas::setAngle);
   connect(m_stepSpin, &QDoubleSpinBox::valueChanged, canvas, &TreeCanvas::setStepLen);
@@ -75,10 +85,26 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
     updateSeedVisibility();
   });
 
+  // A custom (edited / file-loaded) document shows the "Custom" combo entry.
+  // Fires after algoSwitched, so it overrides the preset index when needed.
+  connect(canvas, &TreeCanvas::documentChanged, this, [this]() {
+    if (m_canvas->isCustomDocument() && m_algoCombo->currentIndex() != kCustomIndex) {
+      QSignalBlocker b(m_algoCombo);
+      m_algoCombo->setCurrentIndex(kCustomIndex);
+    }
+  });
+
   updateSeedVisibility();
 }
 
 void LSystemWidget::onAlgoSwitched(int) { updateSeedVisibility(); }
+
+void LSystemWidget::resyncCombo() {
+  QSignalBlocker b(m_algoCombo);
+  m_algoCombo->setCurrentIndex(m_canvas->isCustomDocument()
+                                   ? kCustomIndex
+                                   : static_cast<int>(m_canvas->algoType()));
+}
 
 void LSystemWidget::updateSeedVisibility() {
   m_seedRow->setVisible(m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);

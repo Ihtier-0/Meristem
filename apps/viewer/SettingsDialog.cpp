@@ -1,29 +1,31 @@
 #include "SettingsDialog.h"
 
 #include <functional>
-#include <memory>
-#include <vector>
 
+#include <QCloseEvent>
 #include <QColorDialog>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
+#include "Preferences.h"
 #include "TreeCanvas.h"
 
 namespace D {
 
 namespace {
 
-// A color swatch button. Reads its initial color from get(), writes new picks
-// via set(), and registers a refresher so it can be re-synced from the canvas
-// (e.g. after "Restore Defaults").
+// A color swatch button. Reads its color from get(), writes picks via set(),
+// flags the dialog dirty, and registers a refresher so it can be re-synced from
+// the canvas (e.g. after "Restore Defaults" or a revert).
 QPushButton* colorButton(std::function<QColor()> get, std::function<void(QColor)> set,
+                         std::function<void()> onEdit,
                          std::vector<std::function<void()>>& refreshers, QWidget* parent) {
   auto* btn = new QPushButton(parent);
   btn->setMinimumWidth(60);
@@ -36,12 +38,11 @@ QPushButton* colorButton(std::function<QColor()> get, std::function<void(QColor)
   };
   applyStyle(get());
 
-  // Pass btn->window() (the Preferences dialog) as parent, not btn itself.
-  // If btn were passed, Qt would cascade btn's background-color stylesheet
-  // onto QColorDialog, tinting its entire background.
-  QObject::connect(btn, &QPushButton::clicked, parent, [btn, get, set, applyStyle]() {
+  // Pass btn->window() (the dialog) as parent, not btn itself, or Qt cascades
+  // btn's background-color stylesheet onto QColorDialog.
+  QObject::connect(btn, &QPushButton::clicked, parent, [btn, get, set, applyStyle, onEdit]() {
     QColor c = QColorDialog::getColor(get(), btn->window(), "Pick color");
-    if (c.isValid()) { applyStyle(c); set(c); }
+    if (c.isValid()) { applyStyle(c); set(c); onEdit(); }
   });
 
   refreshers.push_back([get, applyStyle]() { applyStyle(get()); });
@@ -59,13 +60,13 @@ QLineEdit* symbolEdit(char ch, QWidget* parent) {
 }  // namespace
 
 SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
-    : QDialog(parent) {
-  setWindowTitle("Preferences");
+    : QDialog(parent), m_canvas(canvas) {
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+  setDirty(false);  // sets the initial "Preferences" title
 
-  // Refreshers re-read every widget's value from the canvas; "Restore Defaults"
-  // resets the canvas then runs them all.
-  auto refreshers = std::make_shared<std::vector<std::function<void()>>>();
+  captureSnapshot();
+
+  auto onEdit = [this]() { markDirty(); };
 
   auto* lay  = new QVBoxLayout(this);
   auto* tabs = new QTabWidget;
@@ -80,14 +81,14 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   auto* colorsForm = new QFormLayout(colorsBox);
 
   colorsForm->addRow("Line color:",
-      colorButton([canvas] { return canvas->lineColor(); },
-                  [canvas](QColor c) { canvas->setLineColor(c); }, *refreshers, appearPage));
+      colorButton([this] { return m_canvas->lineColor(); },
+                  [this](QColor c) { m_canvas->setLineColor(c); }, onEdit, m_refreshers, appearPage));
   colorsForm->addRow("Background:",
-      colorButton([canvas] { return canvas->bgColor(); },
-                  [canvas](QColor c) { canvas->setBgColor(c); }, *refreshers, appearPage));
+      colorButton([this] { return m_canvas->bgColor(); },
+                  [this](QColor c) { m_canvas->setBgColor(c); }, onEdit, m_refreshers, appearPage));
   colorsForm->addRow("Flower color:",
-      colorButton([canvas] { return canvas->flowerColor(); },
-                  [canvas](QColor c) { canvas->setFlowerColor(c); }, *refreshers, appearPage));
+      colorButton([this] { return m_canvas->flowerColor(); },
+                  [this](QColor c) { m_canvas->setFlowerColor(c); }, onEdit, m_refreshers, appearPage));
 
   appearLay->addWidget(colorsBox);
 
@@ -98,13 +99,15 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   radSpin->setRange(0.05, 3.0);
   radSpin->setSingleStep(0.05);
   radSpin->setDecimals(2);
-  radSpin->setValue(canvas->flowerRadius());
-  connect(radSpin, &QDoubleSpinBox::valueChanged,
-          canvas, &TreeCanvas::setFlowerRadius);
+  radSpin->setValue(m_canvas->flowerRadius());
+  connect(radSpin, &QDoubleSpinBox::valueChanged, this, [this](double v) {
+    m_canvas->setFlowerRadius(v);
+    markDirty();
+  });
   flowerForm->addRow("Radius:", radSpin);
-  refreshers->push_back([radSpin, canvas]() {
+  m_refreshers.push_back([radSpin, this]() {
     QSignalBlocker b(radSpin);
-    radSpin->setValue(canvas->flowerRadius());
+    radSpin->setValue(m_canvas->flowerRadius());
   });
 
   appearLay->addWidget(flowerBox);
@@ -117,7 +120,7 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   auto* symPage = new QWidget;
   auto* symForm = new QFormLayout(symPage);
 
-  const TurtleSymbols initSym = canvas->symbols();
+  const TurtleSymbols initSym = m_canvas->symbols();
   auto* edForward    = symbolEdit(initSym.forward,       symPage);
   auto* edForwardND  = symbolEdit(initSym.forwardNoDraw, symPage);
   auto* edTurnLeft   = symbolEdit(initSym.turnLeft,      symPage);
@@ -154,16 +157,18 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
     s.push          = ch(edPush,       initSym.push);
     s.pop           = ch(edPop,        initSym.pop);
     s.flower        = ch(edFlower,     initSym.flower);
-    canvas->setSymbols(s);
+    m_canvas->setSymbols(s);
   };
 
   for (auto* ed : symEdits) {
-    QObject::connect(ed, &QLineEdit::textChanged,
-                     symPage, [applySymbols](const QString&) { applySymbols(); });
+    connect(ed, &QLineEdit::textChanged, this, [this, applySymbols](const QString&) {
+      applySymbols();
+      markDirty();
+    });
   }
 
-  refreshers->push_back([symEdits, canvas]() {
-    const TurtleSymbols s = canvas->symbols();
+  m_refreshers.push_back([symEdits, this]() {
+    const TurtleSymbols s = m_canvas->symbols();
     const char chars[] = {s.forward, s.forwardNoDraw, s.turnLeft, s.turnRight,
                           s.turnAround, s.push, s.pop, s.flower};
     for (std::size_t i = 0; i < symEdits.size(); ++i) {
@@ -178,18 +183,75 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
 
   auto* btnRow = new QHBoxLayout;
   auto* resetBtn = new QPushButton("Restore Defaults");
-  connect(resetBtn, &QPushButton::clicked, this, [canvas, refreshers]() {
-    canvas->restoreDefaultAppearance();
-    for (auto& r : *refreshers) r();
+  connect(resetBtn, &QPushButton::clicked, this, [this]() {
+    m_canvas->restoreDefaultAppearance();
+    for (auto& r : m_refreshers) r();
+    markDirty();
   });
   btnRow->addWidget(resetBtn);
   btnRow->addStretch();
 
+  auto* saveBtn = new QPushButton("Save");
+  saveBtn->setDefault(true);
+  connect(saveBtn, &QPushButton::clicked, this, [this]() {
+    commit();
+    accept();
+  });
+  btnRow->addWidget(saveBtn);
+
   auto* closeBtn = new QPushButton("Close");
-  connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
+  connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
   btnRow->addWidget(closeBtn);
 
   lay->addLayout(btnRow);
+}
+
+void SettingsDialog::setDirty(bool dirty) {
+  m_dirty = dirty;
+  setWindowTitle(dirty ? "Preferences*" : "Preferences");
+}
+
+void SettingsDialog::captureSnapshot() {
+  m_snapshot.line = m_canvas->lineColor();
+  m_snapshot.flower = m_canvas->flowerColor();
+  m_snapshot.bg = m_canvas->bgColor();
+  m_snapshot.flowerRadius = m_canvas->flowerRadius();
+  m_snapshot.symbols = m_canvas->symbols();
+}
+
+void SettingsDialog::revertToSnapshot() {
+  m_canvas->setLineColor(m_snapshot.line);
+  m_canvas->setFlowerColor(m_snapshot.flower);
+  m_canvas->setBgColor(m_snapshot.bg);
+  m_canvas->setFlowerRadius(m_snapshot.flowerRadius);
+  m_canvas->setSymbols(m_snapshot.symbols);
+  for (auto& r : m_refreshers) r();
+}
+
+void SettingsDialog::commit() {
+  // Live edits already updated the canvas; persist the current appearance.
+  savePreferences(*m_canvas);
+  setDirty(false);
+}
+
+bool SettingsDialog::confirmClose() {
+  if (!m_dirty) return true;
+  const auto choice = QMessageBox::warning(
+      this, "Preferences", "Apply changes to preferences?",
+      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+  if (choice == QMessageBox::Save) { commit(); return true; }
+  if (choice == QMessageBox::Discard) { revertToSnapshot(); setDirty(false); return true; }
+  return false;  // Cancel
+}
+
+void SettingsDialog::closeEvent(QCloseEvent* event) {
+  if (confirmClose()) event->accept();
+  else event->ignore();
+}
+
+void SettingsDialog::reject() {
+  // Esc and the Close button funnel through the same save/discard prompt.
+  if (confirmClose()) QDialog::reject();
 }
 
 }  // namespace D

@@ -25,8 +25,10 @@ class MainWindow final : public QMainWindow {
   void createMenus();
   void refreshStatus();
   void setupLogging();
+  void updateTitle();
   void openPlant();
-  void savePlant();
+  bool savePlant(bool saveAs);     // returns true on success; false if cancelled/failed
+  bool maybeSaveDocument();        // prompt to save a modified document before discarding
 
   TreeCanvas*   m_canvas       = nullptr;
   ControlPanel* m_panel        = nullptr;

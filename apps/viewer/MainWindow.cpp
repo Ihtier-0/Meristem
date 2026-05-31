@@ -3,6 +3,7 @@
 #include <QCloseEvent>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QKeySequence>
 #include <QLabel>
 #include <QMenuBar>
@@ -15,6 +16,7 @@
 #include <spdlog/spdlog.h>
 
 #include "ControlPanel.h"
+#include "LSystemWidget.h"
 #include "LogWidget.h"
 #include "PlantIO.h"
 #include "Preferences.h"
@@ -60,7 +62,20 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
   connect(m_canvas, &TreeCanvas::stateChanged, this, [this](int, int) { refreshStatus(); });
   connect(m_canvas, &TreeCanvas::viewChanged, this,
           [this](double, double, double) { refreshStatus(); });
+  connect(m_canvas, &TreeCanvas::documentChanged, this, &MainWindow::updateTitle);
+
+  // Switching presets via the combo discards the current document: prompt to
+  // save a modified one first, and revert the combo if the user cancels.
+  connect(m_panel->lsystemWidget(), &LSystemWidget::presetRequested, this, [this](int index) {
+    if (!maybeSaveDocument()) {
+      m_panel->lsystemWidget()->resyncCombo();
+      return;
+    }
+    m_canvas->switchAlgo(index);
+  });
+
   refreshStatus();
+  updateTitle();
 
   createMenus();
 
@@ -100,9 +115,12 @@ void MainWindow::createMenus() {
   auto* openAct  = file->addAction("&Open...");
   openAct->setShortcut(QKeySequence::Open);
   connect(openAct, &QAction::triggered, this, &MainWindow::openPlant);
-  auto* saveAct  = file->addAction("&Save As...");
+  auto* saveAct  = file->addAction("&Save");
   saveAct->setShortcut(QKeySequence::Save);
-  connect(saveAct, &QAction::triggered, this, &MainWindow::savePlant);
+  connect(saveAct, &QAction::triggered, this, [this]() { savePlant(false); });
+  auto* saveAsAct = file->addAction("Save &As...");
+  saveAsAct->setShortcut(QKeySequence::SaveAs);
+  connect(saveAsAct, &QAction::triggered, this, [this]() { savePlant(true); });
 
   // ── Edit ──────────────────────────────────────────────────────────────────────
 
@@ -139,29 +157,66 @@ void MainWindow::refreshStatus() {
                              .arg(m_canvas->zoom(), 0, 'f', 3));
 }
 
+void MainWindow::updateTitle() {
+  // "Meristem v0.1.0 - NewTree.dt" (with a trailing * when unsaved).
+  setWindowTitle(QString("%1 v%2 - %3%4")
+                     .arg(MERISTEM_PROJECT_NAME)
+                     .arg(MERISTEM_VERSION_STRING)
+                     .arg(m_canvas->documentName())
+                     .arg(m_canvas->isModified() ? "*" : ""));
+}
+
 void MainWindow::openPlant() {
+  if (!maybeSaveDocument()) return;
   const QString path =
       QFileDialog::getOpenFileName(this, "Open plant", {}, "Meristem plant (*.dt)");
   if (path.isEmpty()) return;
   QString err;
-  if (loadPlantFile(*m_canvas, path, &err))
+  if (loadPlantFile(*m_canvas, path, &err)) {
+    // Opened from disk: a custom document tracked to this file.
+    m_canvas->setDocumentState(QFileInfo(path).fileName(), path, /*dirty=*/false,
+                               /*custom=*/true);
     spdlog::info("[Plant] Opened {}", path.toStdString());
-  else
+  } else {
     QMessageBox::warning(this, "Open failed", err);
+  }
 }
 
-void MainWindow::savePlant() {
-  QString path = QFileDialog::getSaveFileName(this, "Save plant", {}, "Meristem plant (*.dt)");
-  if (path.isEmpty()) return;
-  if (!path.endsWith(".dt", Qt::CaseInsensitive)) path += ".dt";
+bool MainWindow::savePlant(bool saveAs) {
+  QString path = m_canvas->documentPath();
+  if (saveAs || path.isEmpty()) {
+    path = QFileDialog::getSaveFileName(this, "Save plant", m_canvas->documentName(),
+                                        "Meristem plant (*.dt)");
+    if (path.isEmpty()) return false;
+    if (!path.endsWith(".dt", Qt::CaseInsensitive)) path += ".dt";
+  }
   QString err;
-  if (savePlantFile(*m_canvas, path, &err))
-    spdlog::info("[Plant] Saved {}", path.toStdString());
-  else
+  if (!savePlantFile(*m_canvas, path, &err)) {
     QMessageBox::warning(this, "Save failed", err);
+    return false;
+  }
+  m_canvas->setDocumentState(QFileInfo(path).fileName(), path, /*dirty=*/false,
+                             m_canvas->isCustomDocument());
+  spdlog::info("[Plant] Saved {}", path.toStdString());
+  return true;
+}
+
+bool MainWindow::maybeSaveDocument() {
+  if (!m_canvas->isModified()) return true;
+  const auto choice = QMessageBox::warning(
+      this, MERISTEM_PROJECT_NAME,
+      QString("Save changes to %1?").arg(m_canvas->documentName()),
+      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+  if (choice == QMessageBox::Save) return savePlant(false);
+  if (choice == QMessageBox::Discard) return true;
+  return false;  // Cancel
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
+  if (!maybeSaveDocument()) {
+    event->ignore();
+    return;
+  }
   QSettings settings;
   settings.setValue("window/geometry", saveGeometry());
   settings.setValue("window/state", saveState());

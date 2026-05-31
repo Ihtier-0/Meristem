@@ -4,6 +4,7 @@
 
 #include "TreeCanvas.h"
 
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QOpenGLContext>
@@ -73,6 +74,29 @@ void TreeCanvas::initLSystem() {
   m_turtle.setAngle(m_angle);
   m_turtle.setStep(m_stepLen);
   loadPreset(":/examples/d0l.dt");
+  // Startup: a fresh unsaved document named NewTree.dt whose grammar is the d0l
+  // preset. custom=false so the combo shows "D0L" (not "Custom") until the user
+  // edits something; the title still reads "NewTree.dt", not "d0l.dt".
+  setDocumentState("NewTree.dt", QString(), /*dirty=*/false, /*custom=*/false);
+}
+
+// ── Document model ──────────────────────────────────────────────────────────────
+
+void TreeCanvas::setDocumentState(const QString& name, const QString& path, bool dirty,
+                                  bool custom) {
+  m_docName = name;
+  m_docPath = path;
+  m_dirty = dirty;
+  m_custom = custom;
+  emit documentChanged();
+}
+
+void TreeCanvas::markDirty() {
+  if (m_loading) return;
+  if (m_dirty && m_custom) return;  // already in the dirty/custom state
+  m_dirty = true;
+  m_custom = true;
+  emit documentChanged();
 }
 
 void TreeCanvas::populateGrammarBuffers() {
@@ -220,12 +244,14 @@ void TreeCanvas::rebuildMesh() {
 
 void TreeCanvas::stepGeneration() {
   m_algo->step();
+  markDirty();
   rebuildMesh();
   spdlog::info("[L-System] Step -> gen {}, {} symbols", generation(), symbolCount());
 }
 
 void TreeCanvas::resetGeneration() {
   m_algo->reset();
+  markDirty();
   rebuildMesh();
   spdlog::info("[L-System] Reset -> gen {}, {} symbols", generation(), symbolCount());
 }
@@ -239,26 +265,33 @@ void TreeCanvas::switchAlgo(int typeInt) {
       ":/examples/context-1l.dt", ":/examples/context-2l.dt",
       ":/examples/parametric.dt", ":/examples/flower.dt",
   };
-  if (typeInt < 0 || typeInt >= static_cast<int>(kPresets.size())) return;
+  if (typeInt < 0 || typeInt >= static_cast<int>(kPresets.size())) return;  // Custom: keep scene
   loadPreset(kPresets[typeInt]);
 }
 
 void TreeCanvas::loadPreset(const QString& resourcePath) {
   QString err;
-  if (!loadPlantFile(*this, resourcePath, &err))
+  if (!loadPlantFile(*this, resourcePath, &err)) {
     spdlog::error("[Preset] Failed to load {}: {}", resourcePath.toStdString(),
                   err.toStdString());
+    return;
+  }
+  // A freshly loaded preset is a clean, named (non-custom) document.
+  setDocumentState(QFileInfo(resourcePath).fileName(), QString(), /*dirty=*/false,
+                   /*custom=*/false);
 }
 
 // ── Slots — visual params ─────────────────────────────────────────────────────
 
 void TreeCanvas::setAngle(double deg) {
   m_angle = static_cast<float>(deg);
+  markDirty();
   rebuildMesh();
 }
 
 void TreeCanvas::setStepLen(double len) {
   m_stepLen = static_cast<float>(len);
+  markDirty();
   rebuildMesh();
 }
 
@@ -287,6 +320,7 @@ void TreeCanvas::setSeed(int seed) {
   m_seed = seed;
   if (m_algoType == AlgoType::Stochastic)
     static_cast<StochasticLSystemAlgorithm*>(m_algo.get())->setSeed(static_cast<uint32_t>(m_seed));
+  markDirty();
   rebuildMesh();
 }
 
@@ -329,6 +363,7 @@ void TreeCanvas::restoreDefaultAppearance() {
 
 void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules,
                               const ContextEdit& ctx) {
+  markDirty();
   m_grammar.axiom = D::w(axiom);
   m_grammar.rules.clear();
   for (const auto& re : rules) {
@@ -363,6 +398,7 @@ void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEd
 void TreeCanvas::applyParametricGrammar(const std::string& axiom,
                                         const std::vector<ParametricEdit>& rules,
                                         const std::vector<ParamDef>& params) {
+  markDirty();
   using PRule = ParametricLSystemAlgorithm::PRule;
 
   Word pAxiom = detail::parseParametricWord(axiom, {});
@@ -406,6 +442,9 @@ void TreeCanvas::applyParametricGrammar(const std::string& axiom,
 void TreeCanvas::loadPlant(const PlantDoc& d) {
   // Structure only — appearance (colors, radius, symbols) is a user Preference,
   // not part of the document, so it is left untouched here.
+  // m_loading suppresses markDirty() from the apply*Grammar/setter calls below;
+  // the caller (loadPreset / openPlant) sets the real document state afterwards.
+  m_loading = true;
   m_algoType = static_cast<AlgoType>(d.algoType);
   m_angle = static_cast<float>(d.angle);
   m_stepLen = static_cast<float>(d.step);
@@ -450,6 +489,7 @@ void TreeCanvas::loadPlant(const PlantDoc& d) {
     populateGrammarBuffers();
   }
 
+  m_loading = false;
   emit algoSwitched(static_cast<int>(m_algoType));
   spdlog::info("[Plant] Loaded: algo {}, gen {}, {} symbols",
                static_cast<int>(m_algoType), generation(), symbolCount());
