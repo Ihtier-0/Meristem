@@ -1,0 +1,23 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" fill="#1a1a1a"/>
+  <!-- trunk -->
+  <rect x="28" y="40" width="8" height="8" fill="#4ade80"/>
+  <rect x="28" y="48" width="8" height="8" fill="#4ade80"/>
+  <rect x="28" y="56" width="8" height="8" fill="#4ade80"/>
+  <!-- level 1 -->
+  <rect x="28" y="32" width="8" height="8" fill="#4ade80"/>
+  <rect x="16" y="32" width="8" height="8" fill="#4ade80"/>
+  <rect x="40" y="32" width="8" height="8" fill="#4ade80"/>
+  <!-- level 2 -->
+  <rect x="28" y="24" width="8" height="8" fill="#4ade80"/>
+  <rect x="8"  y="24" width="8" height="8" fill="#4ade80"/>
+  <rect x="48" y="24" width="8" height="8" fill="#4ade80"/>
+  <!-- level 3 -->
+  <rect x="28" y="16" width="8" height="8" fill="#4ade80"/>
+  <rect x="16" y="16" width="8" height="8" fill="#4ade80"/>
+  <rect x="40" y="16" width="8" height="8" fill="#4ade80"/>
+  <!-- level 4 top -->
+  <rect x="28" y="8"  width="8" height="8" fill="#4ade80"/>
+  <rect x="8"  y="8"  width="8" height="8" fill="#4ade80"/>
+  <rect x="48" y="8"  width="8" height="8" fill="#4ade80"/>
+</svg>

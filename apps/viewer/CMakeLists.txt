@@ -19,7 +19,7 @@ set(_sources
   SettingsDialog.cpp
   LogWidget.cpp
 )
-add_executable(viewer ${_headers} ${_sources})
+add_executable(viewer ${_headers} ${_sources} resources.qrc)
 
 set_target_properties(viewer PROPERTIES
   WIN32_EXECUTABLE TRUE
@@ -35,6 +35,7 @@ target_link_libraries(viewer PRIVATE
   Qt6::Core
   Qt6::Widgets
   Qt6::OpenGLWidgets
+  Qt6::Svg
 )
 
 # Deploy Qt DLLs next to the executable after each build (Windows only).
