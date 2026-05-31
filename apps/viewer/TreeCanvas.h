@@ -36,8 +36,8 @@ class TreeCanvas final : public QOpenGLWidget {
 
   struct RuleEdit {
     char predecessor[2]{};
-    char leftContext[2]{};
-    char rightContext[2]{};
+    char leftContext[8]{};
+    char rightContext[8]{};
     char successor[256]{};
     float probability = 1.f;
   };

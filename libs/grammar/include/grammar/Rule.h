@@ -11,10 +11,15 @@ using Condition = std::function<bool(std::span<const ParamValue>)>;
 using Production = std::function<Word(std::span<const ParamValue>)>;
 
 // [leftContext <] predecessor [> rightContext] -> successor
+//
+// leftContext / rightContext may hold more than one symbol, e.g. "FF" matches
+// two stem segments in a row. They are read in string order: the char nearest
+// the predecessor is leftContext.back() / rightContext.front(). An empty string
+// means "no context on that side".
 struct Rule final {
   char predecessor;
-  std::optional<char> leftContext;
-  std::optional<char> rightContext;
+  std::string leftContext;
+  std::string rightContext;
   Condition condition;
   float probability = 1.f;
   Production successor;
@@ -24,6 +29,7 @@ struct Rule final {
 //   ruleFor('A').to("AB")
 //   ruleFor('A').to("AB").withProbability(0.6f)
 //   ruleFor('A').withLeftContext('F').to("B")
+//   ruleFor('A').withLeftContext("FF").to("B")
 //   ruleFor('A').withLeftContext('[').withRightContext(']').to("B")
 
 class RuleBuilder final {
@@ -39,12 +45,20 @@ class RuleBuilder final {
     m_rule.probability = p;
     return *this;
   }
+  RuleBuilder& withLeftContext(std::string_view c) {
+    m_rule.leftContext = std::string(c);
+    return *this;
+  }
   RuleBuilder& withLeftContext(char c) {
-    m_rule.leftContext = c;
+    m_rule.leftContext = std::string(1, c);
+    return *this;
+  }
+  RuleBuilder& withRightContext(std::string_view c) {
+    m_rule.rightContext = std::string(c);
     return *this;
   }
   RuleBuilder& withRightContext(char c) {
-    m_rule.rightContext = c;
+    m_rule.rightContext = std::string(1, c);
     return *this;
   }
 

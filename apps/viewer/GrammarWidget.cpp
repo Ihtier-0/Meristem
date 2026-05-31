@@ -240,8 +240,10 @@ void GrammarWidget::onApplyClicked() {
       auto rc = row.rightCtx->text().toStdString();
       auto succ = row.succ->text().toStdString();
       if (!pred.empty()) re.predecessor[0] = pred[0];
-      if (!lc.empty()) re.leftContext[0] = lc[0];
-      if (!rc.empty()) re.rightContext[0] = rc[0];
+      auto lclen = std::min(lc.size(), sizeof(re.leftContext) - 1);
+      std::copy_n(lc.begin(), lclen, re.leftContext);
+      auto rclen = std::min(rc.size(), sizeof(re.rightContext) - 1);
+      std::copy_n(rc.begin(), rclen, re.rightContext);
       auto slen = std::min(succ.size(), sizeof(re.successor) - 1);
       std::copy_n(succ.begin(), slen, re.successor);
       re.probability = static_cast<float>(row.prob->value());
@@ -304,9 +306,9 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
                     m_canvas->algoType() == TreeCanvas::AlgoType::ContextFlower);
   bool isStoch = (m_canvas->algoType() == TreeCanvas::AlgoType::Stochastic);
 
-  row.leftCtx = new QLineEdit(re.leftContext[0] ? QString(re.leftContext[0]) : "", row.widget);
+  row.leftCtx = new QLineEdit(QString::fromLatin1(re.leftContext), row.widget);
   row.leftCtx->setPlaceholderText("lc");
-  row.leftCtx->setFixedWidth(24);
+  row.leftCtx->setFixedWidth(40);
   row.leftCtx->setVisible(isContext);
   hlay->addWidget(row.leftCtx);
   if (isContext) hlay->addWidget(new QLabel("<", row.widget));
@@ -315,9 +317,9 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   row.pred->setFixedWidth(20);
   hlay->addWidget(row.pred);
 
-  row.rightCtx = new QLineEdit(re.rightContext[0] ? QString(re.rightContext[0]) : "", row.widget);
+  row.rightCtx = new QLineEdit(QString::fromLatin1(re.rightContext), row.widget);
   row.rightCtx->setPlaceholderText("rc");
-  row.rightCtx->setFixedWidth(24);
+  row.rightCtx->setFixedWidth(40);
   row.rightCtx->setVisible(isContext);
   if (isContext) {
     hlay->addWidget(new QLabel(">", row.widget));

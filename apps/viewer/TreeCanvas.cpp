@@ -56,8 +56,10 @@ TreeCanvas::RuleEdit ruleToEdit(const Rule& rule) {
   TreeCanvas::RuleEdit re;
   re.predecessor[0] = rule.predecessor;
   re.probability = rule.probability;
-  if (rule.leftContext) re.leftContext[0] = *rule.leftContext;
-  if (rule.rightContext) re.rightContext[0] = *rule.rightContext;
+  auto lcLen = std::min(rule.leftContext.size(), sizeof(re.leftContext) - 1);
+  std::copy_n(rule.leftContext.begin(), lcLen, re.leftContext);
+  auto rcLen = std::min(rule.rightContext.size(), sizeof(re.rightContext) - 1);
+  std::copy_n(rule.rightContext.begin(), rcLen, re.rightContext);
   auto str = D::str(rule.successor({}));
   auto slen = std::min(str.size(), sizeof(re.successor) - 1);
   std::copy_n(str.begin(), slen, re.successor);
@@ -397,8 +399,8 @@ void TreeCanvas::applyGrammar(const std::string& axiom, const std::vector<RuleEd
     Rule rule;
     rule.predecessor = re.predecessor[0];
     rule.probability = re.probability;
-    if (re.leftContext[0] != '\0') rule.leftContext = re.leftContext[0];
-    if (re.rightContext[0] != '\0') rule.rightContext = re.rightContext[0];
+    rule.leftContext = re.leftContext;
+    rule.rightContext = re.rightContext;
     std::string succStr = re.successor;
     rule.successor = [succStr](std::span<const ParamValue>) -> Word {
       return D::w(succStr);

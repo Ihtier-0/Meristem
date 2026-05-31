@@ -10,18 +10,12 @@ namespace D {
 
 namespace {
 
-// Left context in Biological mode.
-//
-// Scan leftward from position i, applying three rules:
-//   1. ignore chars    — skip over them linearly.
-//   2. pop  (']')      — a sibling branch is to the left; skip the entire
-//                        matched [...] block and continue on the parent axis.
-//   3. push ('[')      — we just crossed the opening of our own branch;
-//                        the parent symbol is to the left, so keep going.
-//   4. anything else   — return it as the left context.
-char leftCtx(const Word& w, size_t i, std::string_view ignore, std::optional<char> push,
-             std::optional<char> pop) {
-  size_t j = i;
+// One step of the leftward Biological-mode walk from position j (exclusive).
+// Skips ignore chars; jumps over a whole sibling [...] block on a pop; steps
+// transparently through our own branch-open on a push. Returns the next
+// significant symbol and updates j to its position, or '\0' if none remains.
+char prevLeft(const Word& w, size_t& j, std::string_view ignore, std::optional<char> push,
+              std::optional<char> pop) {
   while (j > 0) {
     char c = w[--j].letter;
     if (ignore.find(c) != std::string_view::npos) continue;
@@ -31,7 +25,7 @@ char leftCtx(const Word& w, size_t i, std::string_view ignore, std::optional<cha
       while (j > 0 && depth > 0) {
         char b = w[--j].letter;
         if (pop && b == *pop) ++depth;
-        if (push && b == *push) --depth;
+        else if (push && b == *push) --depth;
       }
       continue;
     }
@@ -41,46 +35,71 @@ char leftCtx(const Word& w, size_t i, std::string_view ignore, std::optional<cha
   return '\0';
 }
 
-// Right context in Biological mode.
-//
-// Scan rightward from position i, applying three rules:
-//   1. ignore chars    — skip over them linearly.
-//   2. push ('[')      — a sub-branch starts; skip the entire [...] block,
-//                        then continue on the same axis.
-//   3. pop  (']')      — end of our branch.
-//                        includeSiblings=false -> no right context (stop).
-//                        includeSiblings=true  -> cross the boundary, continue
-//                        on the parent axis (Houdini "Context Includes Siblings").
-//   4. anything else   — return it as the right context.
-char rightCtx(const Word& w, size_t i, std::string_view ignore, std::optional<char> push,
-              std::optional<char> pop, bool includeSiblings) {
-  size_t j = i + 1;
-  while (j < w.size()) {
-    char c = w[j].letter;
+// One step of the rightward Biological-mode walk from position j (exclusive).
+// Skips ignore chars; jumps over a whole sub-branch on a push; on a pop either
+// stops (no right context) or crosses to the parent axis when includeSiblings
+// is set (Houdini "Context Includes Siblings"). Returns the next significant
+// symbol and updates j to its position, or '\0' if none remains.
+char nextRight(const Word& w, size_t& j, std::string_view ignore, std::optional<char> push,
+               std::optional<char> pop, bool includeSiblings) {
+  size_t m = j + 1;
+  while (m < w.size()) {
+    char c = w[m].letter;
     if (ignore.find(c) != std::string_view::npos) {
-      ++j;
+      ++m;
       continue;
     }
     if (push && c == *push) {
       // skip the sub-branch
       int depth = 1;
-      ++j;
-      while (j < w.size() && depth > 0) {
-        char b = w[j].letter;
+      ++m;
+      while (m < w.size() && depth > 0) {
+        char b = w[m].letter;
         if (push && b == *push) ++depth;
-        if (pop && b == *pop) --depth;
-        ++j;
+        else if (pop && b == *pop) --depth;
+        ++m;
       }
       continue;
     }
     if (pop && c == *pop) {
       if (!includeSiblings) return '\0';
-      ++j;
+      ++m;
       continue;  // cross the branch boundary, continue on parent axis
     }
+    j = m;
     return c;
   }
   return '\0';
+}
+
+// Match a (possibly multi-char) left context against the symbols left of i.
+// ctx is read in string order, so ctx.back() must equal the symbol nearest the
+// predecessor. Strict mode compares literal neighbours; Biological mode walks
+// the ignore/branch-aware traversal above.
+bool matchLeft(const Word& w, size_t i, std::string_view ctx, bool biological,
+               std::string_view ignore, std::optional<char> push, std::optional<char> pop) {
+  size_t j = i;
+  for (size_t k = ctx.size(); k-- > 0;) {
+    char c = biological ? prevLeft(w, j, ignore, push, pop)
+                        : (j > 0 ? w[--j].letter : '\0');
+    if (c != ctx[k]) return false;
+  }
+  return true;
+}
+
+// Match a (possibly multi-char) right context against the symbols right of i.
+// ctx is read in string order, so ctx.front() must equal the symbol nearest the
+// predecessor.
+bool matchRight(const Word& w, size_t i, std::string_view ctx, bool biological,
+                std::string_view ignore, std::optional<char> push, std::optional<char> pop,
+                bool includeSiblings) {
+  size_t j = i;
+  for (char want : ctx) {
+    char c = biological ? nextRight(w, j, ignore, push, pop, includeSiblings)
+                        : (j + 1 < w.size() ? w[++j].letter : '\0');
+    if (c != want) return false;
+  }
+  return true;
 }
 
 }  // namespace
@@ -94,12 +113,17 @@ bool LSystemGrammar::valid() const {
 
   // Context-char validation only applies in Biological mode.
   if (contextMode == ContextMode::Biological) {
+    auto bad = [&](char c) {
+      return ignore.find(c) != std::string::npos || (push && c == *push) || (pop && c == *pop);
+    };
+    auto anyBad = [&](const std::string& s) {
+      for (char c : s)
+        if (bad(c)) return true;
+      return false;
+    };
     for (const Rule& r : rules) {
-      auto bad = [&](char c) {
-        return ignore.find(c) != std::string::npos || (push && c == *push) || (pop && c == *pop);
-      };
-      if (r.leftContext && bad(*r.leftContext)) return false;
-      if (r.rightContext && bad(*r.rightContext)) return false;
+      if (anyBad(r.leftContext)) return false;
+      if (anyBad(r.rightContext)) return false;
     }
   }
 
@@ -119,7 +143,7 @@ bool LSystemGrammar::valid() const {
   // Only rules with p < 1 are stochastic; rules with p == 1 are deterministic
   // and are already covered by the shadowed-rule check above.
   // Conditional rules are skipped — their guards may exclude some alternatives at runtime.
-  using GroupKey = std::tuple<char, std::optional<char>, std::optional<char>>;
+  using GroupKey = std::tuple<char, std::string, std::string>;
   std::map<GroupKey, float> probSums;
   for (const Rule& r : rules) {
     if (r.condition) continue;
@@ -148,21 +172,17 @@ Word LSystemGrammar::derive(const Word& current) const {
     const Symbol& sym = current[i];
     bool applied = false;
 
+    const bool bio = (contextMode == ContextMode::Biological);
     for (const Rule& rule : rules) {
       if (rule.predecessor != sym.letter) continue;
 
-      if (rule.leftContext) {
-        char lc = (contextMode == ContextMode::Biological) ? leftCtx(current, i, ignore, push, pop)
-                                                           : (i > 0 ? current[i - 1].letter : '\0');
-        if (lc != *rule.leftContext) continue;
-      }
+      if (!rule.leftContext.empty() &&
+          !matchLeft(current, i, rule.leftContext, bio, ignore, push, pop))
+        continue;
 
-      if (rule.rightContext) {
-        char rc = (contextMode == ContextMode::Biological)
-                      ? rightCtx(current, i, ignore, push, pop, includeSiblings)
-                      : (i + 1 < current.size() ? current[i + 1].letter : '\0');
-        if (rc != *rule.rightContext) continue;
-      }
+      if (!rule.rightContext.empty() &&
+          !matchRight(current, i, rule.rightContext, bio, ignore, push, pop, includeSiblings))
+        continue;
 
       if (rule.condition && !rule.condition(sym.params)) continue;
 
@@ -189,22 +209,18 @@ Word LSystemGrammar::derive(const Word& current, std::mt19937& rng) const {
     const Symbol& sym = current[i];
 
     // Collect candidate rules for this symbol
+    const bool bio = (contextMode == ContextMode::Biological);
     std::vector<const Rule*> candidates;
     for (const Rule& rule : rules) {
       if (rule.predecessor != sym.letter) continue;
 
-      if (rule.leftContext) {
-        char lc = (contextMode == ContextMode::Biological) ? leftCtx(current, i, ignore, push, pop)
-                                                           : (i > 0 ? current[i - 1].letter : '\0');
-        if (lc != *rule.leftContext) continue;
-      }
+      if (!rule.leftContext.empty() &&
+          !matchLeft(current, i, rule.leftContext, bio, ignore, push, pop))
+        continue;
 
-      if (rule.rightContext) {
-        char rc = (contextMode == ContextMode::Biological)
-                      ? rightCtx(current, i, ignore, push, pop, includeSiblings)
-                      : (i + 1 < current.size() ? current[i + 1].letter : '\0');
-        if (rc != *rule.rightContext) continue;
-      }
+      if (!rule.rightContext.empty() &&
+          !matchRight(current, i, rule.rightContext, bio, ignore, push, pop, includeSiblings))
+        continue;
 
       if (rule.condition && !rule.condition(sym.params)) continue;
       candidates.push_back(&rule);
@@ -343,6 +359,71 @@ TEST_SUITE("LSystemGrammar/Biological left context") {
   }
 
 }  // TEST_SUITE("LSystemGrammar/Biological left context")
+
+TEST_SUITE("LSystemGrammar/Multi-symbol context") {
+  TEST_CASE("FF<A matches two stems in a row, F<A matches one") {
+    // Left context "FF" requires two significant symbols left of A; ".back()"
+    // (the nearest) is checked first while walking outward.
+    D::LSystemGrammar g;
+    g.ignore = "+-";
+    g.push = '[';
+    g.pop = ']';
+    g.rules = {D::ruleFor('A').withLeftContext("FF").to("B"), D::ruleFor('A').to("X")};
+
+    // One F above A -> no match -> default.
+    CHECK(D::str(g.derive(D::w("F[+A]"))) == "F[+X]");
+    // Two F's reachable across the branch-open -> match.
+    CHECK(D::str(g.derive(D::w("FF[+A]"))) == "FF[+B]");
+  }
+
+  TEST_CASE("A>FF matches two right-hand stems on the main axis") {
+    D::LSystemGrammar g;
+    g.rules = {D::ruleFor('A').withRightContext("FF").to("B"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(D::w("AF"))) == "XF");    // only one F -> default
+    CHECK(D::str(g.derive(D::w("AFF"))) == "BFF");  // two F's -> match
+  }
+
+  TEST_CASE("Strict mode multi-symbol left context is literal") {
+    D::LSystemGrammar g;
+    g.contextMode = D::ContextMode::Strict;
+    g.rules = {D::ruleFor('A').withLeftContext("BC").to("K"), D::ruleFor('A').to("X")};
+    CHECK(D::str(g.derive(D::w("BCA"))) == "BCK");  // literal BC before A
+    CHECK(D::str(g.derive(D::w("CBA"))) == "CBX");  // wrong order -> default
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Multi-symbol context")
+
+TEST_SUITE("LSystemGrammar/Context flowering") {
+  TEST_CASE("FF<A->K: four apices flower after two stems form above them") {
+    // The "Context-sensitive (flower)" viewer example (examples::contextFlower):
+    // axiom A plus one two-symbol context rule FF < A -> K and the base rules.
+    // Requiring two stem segments delays flowering until the bush has branched
+    // twice (four apices), then all tips flower together. ignore="+-" lets the
+    // left-context scan skip turns and the branch-open bracket.
+    D::LSystemGrammar g;
+    g.ignore = "+-";
+    g.push = '[';
+    g.pop = ']';
+    g.axiom = D::w("A");
+    g.rules = {
+        D::ruleFor('A').withLeftContext("FF").to("K"),
+        D::ruleFor('A').to("F[+A][-A]"),
+        D::ruleFor('F').to("FF"),
+    };
+
+    D::Word cur = g.axiom;
+    // Step 1: axiom A has no stems above it -> branch.
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "F[+A][-A]");
+    // Step 2: only one F above each apex -> branch again, four apices.
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "FF[+F[+A][-A]][-F[+A][-A]]");
+    // Step 3: two F's now reachable above each apex -> all four flower.
+    cur = g.derive(cur);
+    CHECK(D::str(cur) == "FFFF[+FF[+K][-K]][-FF[+K][-K]]");
+  }
+
+}  // TEST_SUITE("LSystemGrammar/Context flowering")
 
 TEST_SUITE("LSystemGrammar/Biological right context") {
   TEST_CASE("A>F->B: direct neighbour") {

@@ -35,20 +35,21 @@ inline LSystemGrammar stochasticPlant() {
   return g;
 }
 
-// Context-sensitive extension of binaryTree(), delta = 25 deg.
-// Adds symbol K (flower). One context rule:
-//   F < A -> K   apex A becomes a flower when a mature stem F is to its left
-//   A -> F[+A][-A]   default branching (no context match)
-//   F -> FF
+// Context-sensitive extension of binaryTree(): same axiom A and the same base
+// rules, plus one two-symbol context rule. Adds symbol K (flower). delta = 25.
+//   FF < A -> K   apex A flowers only when two mature stem segments lie above
+//                 it (ignore="+-" skips turns and the branch-open bracket, so
+//                 the matched left context is the parent + grandparent stem)
+//   A -> F[+A][-A]   default branching (Пример 1)
+//   F -> FF          stem growth     (Пример 1)
 //
-// Derivation:
+// The two-segment requirement delays flowering by one generation versus a
+// single-F context, so the bush branches twice (four apices) before its tips
+// flower together:
 //   Step 0: A
-//   Step 1: F[+A][-A]          A has no F to its left -> default fires
-//   Step 2: FF[+K][-K]         both A's have F as left context -> K
-//   Step 3: FFFF[+K][-K]       K is terminal (no rule); stems keep growing
-//
-// From the third iteration onward branch tips carry K, modelling
-// bottom-up flowering signal propagation (article fig. 4).
+//   Step 1: F[+A][-A]                              one F above each apex -> no flower yet
+//   Step 2: FF[+F[+A][-A]][-F[+A][-A]]             still one F per branch -> branches again
+//   Step 3: FFFF[+FF[+K][-K]][-FF[+K][-K]]         two F's above each apex -> four flowers
 inline LSystemGrammar contextFlower() {
   LSystemGrammar g;
 
@@ -57,8 +58,8 @@ inline LSystemGrammar contextFlower() {
   g.push = '[';
   g.pop = ']';
   g.rules = {
-      ruleFor('A').withLeftContext('F').to("K"),  // F < A -> K  (before default)
-      ruleFor('A').to("F[+A][-A]"),               // default branching
+      ruleFor('A').withLeftContext("FF").to("K"),  // FF < A -> K  (before default)
+      ruleFor('A').to("F[+A][-A]"),                // default branching
       ruleFor('F').to("FF"),
   };
   return g;
