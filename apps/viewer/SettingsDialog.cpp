@@ -2,11 +2,13 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include <QColorDialog>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTabWidget>
@@ -18,30 +20,31 @@ namespace D {
 
 namespace {
 
-QPushButton* colorButton(QColor color, QWidget* parent,
-                          std::function<void(QColor)> onChange) {
+// A color swatch button. Reads its initial color from get(), writes new picks
+// via set(), and registers a refresher so it can be re-synced from the canvas
+// (e.g. after "Restore Defaults").
+QPushButton* colorButton(std::function<QColor()> get, std::function<void(QColor)> set,
+                         std::vector<std::function<void()>>& refreshers, QWidget* parent) {
   auto* btn = new QPushButton(parent);
   btn->setMinimumWidth(60);
   btn->setFixedHeight(22);
 
-  auto current = std::make_shared<QColor>(color);
-
-  auto applyStyle = [btn, current](QColor c) {
-    *current = c;
+  auto applyStyle = [btn](QColor c) {
     btn->setStyleSheet(
         QString("background-color: rgb(%1,%2,%3); border: 1px solid #555;")
             .arg(c.red()).arg(c.green()).arg(c.blue()));
   };
-  applyStyle(color);
+  applyStyle(get());
 
   // Pass btn->window() (the Preferences dialog) as parent, not btn itself.
   // If btn were passed, Qt would cascade btn's background-color stylesheet
   // onto QColorDialog, tinting its entire background.
-  QObject::connect(btn, &QPushButton::clicked, parent, [btn, current, applyStyle, onChange]() {
-    QColor c = QColorDialog::getColor(*current, btn->window(), "Pick color");
-    if (c.isValid()) { applyStyle(c); onChange(c); }
+  QObject::connect(btn, &QPushButton::clicked, parent, [btn, get, set, applyStyle]() {
+    QColor c = QColorDialog::getColor(get(), btn->window(), "Pick color");
+    if (c.isValid()) { applyStyle(c); set(c); }
   });
 
+  refreshers.push_back([get, applyStyle]() { applyStyle(get()); });
   return btn;
 }
 
@@ -60,6 +63,10 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   setWindowTitle("Preferences");
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
+  // Refreshers re-read every widget's value from the canvas; "Restore Defaults"
+  // resets the canvas then runs them all.
+  auto refreshers = std::make_shared<std::vector<std::function<void()>>>();
+
   auto* lay  = new QVBoxLayout(this);
   auto* tabs = new QTabWidget;
   lay->addWidget(tabs);
@@ -73,14 +80,14 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   auto* colorsForm = new QFormLayout(colorsBox);
 
   colorsForm->addRow("Line color:",
-      colorButton(canvas->lineColor(), appearPage,
-          [canvas](QColor c) { canvas->setLineColor(c); }));
+      colorButton([canvas] { return canvas->lineColor(); },
+                  [canvas](QColor c) { canvas->setLineColor(c); }, *refreshers, appearPage));
   colorsForm->addRow("Background:",
-      colorButton(canvas->bgColor(), appearPage,
-          [canvas](QColor c) { canvas->setBgColor(c); }));
+      colorButton([canvas] { return canvas->bgColor(); },
+                  [canvas](QColor c) { canvas->setBgColor(c); }, *refreshers, appearPage));
   colorsForm->addRow("Flower color:",
-      colorButton(canvas->flowerColor(), appearPage,
-          [canvas](QColor c) { canvas->setFlowerColor(c); }));
+      colorButton([canvas] { return canvas->flowerColor(); },
+                  [canvas](QColor c) { canvas->setFlowerColor(c); }, *refreshers, appearPage));
 
   appearLay->addWidget(colorsBox);
 
@@ -95,6 +102,10 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   connect(radSpin, &QDoubleSpinBox::valueChanged,
           canvas, &TreeCanvas::setFlowerRadius);
   flowerForm->addRow("Radius:", radSpin);
+  refreshers->push_back([radSpin, canvas]() {
+    QSignalBlocker b(radSpin);
+    radSpin->setValue(canvas->flowerRadius());
+  });
 
   appearLay->addWidget(flowerBox);
   appearLay->addStretch();
@@ -125,6 +136,9 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
   symForm->addRow("Pop state:",          edPop);
   symForm->addRow("Flower:",             edFlower);
 
+  const std::vector<QLineEdit*> symEdits = {edForward, edForwardND, edTurnLeft, edTurnRight,
+                                            edTurnAround, edPush, edPop, edFlower};
+
   // Collect all edits; rebuild TurtleSymbols and push to canvas on any change.
   auto applySymbols = [=]() {
     auto ch = [](QLineEdit* ed, char def) -> char {
@@ -143,19 +157,39 @@ SettingsDialog::SettingsDialog(TreeCanvas* canvas, QWidget* parent)
     canvas->setSymbols(s);
   };
 
-  for (auto* ed : {edForward, edForwardND, edTurnLeft,
-                   edTurnRight, edTurnAround, edPush, edPop, edFlower}) {
+  for (auto* ed : symEdits) {
     QObject::connect(ed, &QLineEdit::textChanged,
                      symPage, [applySymbols](const QString&) { applySymbols(); });
   }
 
+  refreshers->push_back([symEdits, canvas]() {
+    const TurtleSymbols s = canvas->symbols();
+    const char chars[] = {s.forward, s.forwardNoDraw, s.turnLeft, s.turnRight,
+                          s.turnAround, s.push, s.pop, s.flower};
+    for (std::size_t i = 0; i < symEdits.size(); ++i) {
+      QSignalBlocker b(symEdits[i]);
+      symEdits[i]->setText(QString(QChar(chars[i])));
+    }
+  });
+
   tabs->addTab(symPage, "Symbols");
 
-  // ── Close ─────────────────────────────────────────────────────────────────────
+  // ── Buttons ─────────────────────────────────────────────────────────────────────
+
+  auto* btnRow = new QHBoxLayout;
+  auto* resetBtn = new QPushButton("Restore Defaults");
+  connect(resetBtn, &QPushButton::clicked, this, [canvas, refreshers]() {
+    canvas->restoreDefaultAppearance();
+    for (auto& r : *refreshers) r();
+  });
+  btnRow->addWidget(resetBtn);
+  btnRow->addStretch();
 
   auto* closeBtn = new QPushButton("Close");
   connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
-  lay->addWidget(closeBtn);
+  btnRow->addWidget(closeBtn);
+
+  lay->addLayout(btnRow);
 }
 
 }  // namespace D

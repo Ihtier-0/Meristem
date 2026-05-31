@@ -1,9 +1,13 @@
 #include "MainWindow.h"
 
+#include <QCloseEvent>
 #include <QDockWidget>
+#include <QFileDialog>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QSettings>
 #include <QStatusBar>
 
 #include <spdlog/sinks/basic_file_sink.h>
@@ -12,6 +16,8 @@
 
 #include "ControlPanel.h"
 #include "LogWidget.h"
+#include "PlantIO.h"
+#include "Preferences.h"
 #include "QtLogSink.h"
 #include "SettingsDialog.h"
 #include "TreeCanvas.h"
@@ -32,6 +38,7 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
 
   m_panel        = new ControlPanel(m_canvas, this);
   m_controlsDock = new QDockWidget("Properties", this);
+  m_controlsDock->setObjectName("PropertiesDock");  // required for saveState/restoreState
   m_controlsDock->setWidget(m_panel);
   m_controlsDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
                               QDockWidget::DockWidgetFloatable);
@@ -39,6 +46,7 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
 
   m_logWidget = new LogWidget(this);
   m_logDock   = new QDockWidget("Log", this);
+  m_logDock->setObjectName("LogDock");  // required for saveState/restoreState
   m_logDock->setWidget(m_logWidget);
   m_logDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
                          QDockWidget::DockWidgetFloatable);
@@ -55,6 +63,15 @@ MainWindow::MainWindow(QWidget* parent /* = nullptr */,
   refreshStatus();
 
   createMenus();
+
+  // ── Restore session ───────────────────────────────────────────────────────────
+  QSettings settings;
+  const QByteArray geom = settings.value("window/geometry").toByteArray();
+  if (!geom.isEmpty()) {
+    restoreGeometry(geom);
+    restoreState(settings.value("window/state").toByteArray());
+  }
+  loadPreferences(*m_canvas);
 }
 
 void MainWindow::setupLogging() {
@@ -77,6 +94,16 @@ void MainWindow::setupLogging() {
 }
 
 void MainWindow::createMenus() {
+  // ── File ──────────────────────────────────────────────────────────────────────
+
+  auto* file     = menuBar()->addMenu("&File");
+  auto* openAct  = file->addAction("&Open...");
+  openAct->setShortcut(QKeySequence::Open);
+  connect(openAct, &QAction::triggered, this, &MainWindow::openPlant);
+  auto* saveAct  = file->addAction("&Save As...");
+  saveAct->setShortcut(QKeySequence::Save);
+  connect(saveAct, &QAction::triggered, this, &MainWindow::savePlant);
+
   // ── Edit ──────────────────────────────────────────────────────────────────────
 
   auto* edit      = menuBar()->addMenu("&Edit");
@@ -110,6 +137,36 @@ void MainWindow::refreshStatus() {
                              .arg(m_canvas->generation())
                              .arg(m_canvas->symbolCount())
                              .arg(m_canvas->zoom(), 0, 'f', 3));
+}
+
+void MainWindow::openPlant() {
+  const QString path =
+      QFileDialog::getOpenFileName(this, "Open plant", {}, "Meristem plant (*.dt)");
+  if (path.isEmpty()) return;
+  QString err;
+  if (loadPlantFile(*m_canvas, path, &err))
+    spdlog::info("[Plant] Opened {}", path.toStdString());
+  else
+    QMessageBox::warning(this, "Open failed", err);
+}
+
+void MainWindow::savePlant() {
+  QString path = QFileDialog::getSaveFileName(this, "Save plant", {}, "Meristem plant (*.dt)");
+  if (path.isEmpty()) return;
+  if (!path.endsWith(".dt", Qt::CaseInsensitive)) path += ".dt";
+  QString err;
+  if (savePlantFile(*m_canvas, path, &err))
+    spdlog::info("[Plant] Saved {}", path.toStdString());
+  else
+    QMessageBox::warning(this, "Save failed", err);
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+  QSettings settings;
+  settings.setValue("window/geometry", saveGeometry());
+  settings.setValue("window/state", saveState());
+  savePreferences(*m_canvas);
+  QMainWindow::closeEvent(event);
 }
 
 }  // namespace D

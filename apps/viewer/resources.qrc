@@ -1,5 +1,11 @@
 <RCC>
-    <qresource prefix="/">
-        <file>icons/icon.svg</file>
-    </qresource>
+  <qresource prefix="/">
+    <file>icons/icon.svg</file>
+    <file>examples/d0l.dt</file>
+    <file>examples/stochastic.dt</file>
+    <file>examples/context-1l.dt</file>
+    <file>examples/context-2l.dt</file>
+    <file>examples/parametric.dt</file>
+    <file>examples/flower.dt</file>
+  </qresource>
 </RCC>

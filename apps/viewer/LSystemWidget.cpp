@@ -67,9 +67,12 @@ LSystemWidget::LSystemWidget(TreeCanvas* canvas, QWidget* parent)
   connect(stepBtn, &QPushButton::clicked, canvas, &TreeCanvas::stepGeneration);
   connect(resetBtn, &QPushButton::clicked, canvas, &TreeCanvas::resetGeneration);
 
-  connect(canvas, &TreeCanvas::algoSwitched, this, [this](int) {
-    QSignalBlocker b(m_angleSpin);
-    m_angleSpin->setValue(m_canvas->angle());
+  connect(canvas, &TreeCanvas::algoSwitched, this, [this](int typeInt) {
+    { QSignalBlocker b(m_algoCombo); m_algoCombo->setCurrentIndex(typeInt); }
+    { QSignalBlocker b(m_angleSpin); m_angleSpin->setValue(m_canvas->angle()); }
+    { QSignalBlocker b(m_stepSpin); m_stepSpin->setValue(m_canvas->stepLen()); }
+    { QSignalBlocker b(m_seedSpin); m_seedSpin->setValue(m_canvas->seed()); }
+    updateSeedVisibility();
   });
 
   updateSeedVisibility();

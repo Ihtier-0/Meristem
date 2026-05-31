@@ -1,0 +1,28 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "Context-sensitive (2L)",
+    "description": "ABP fractal plant with two-sided context rules. The X's have three distinct neighbour pairs, each producing a different sub-tree. Both left AND right context are checked (true 2L). Strict mode matches literal neighbours so '[' and ']' can be context chars. Press Step 3-4 times.",
+    "derivation": [
+        "[ < X > ] -> F-[[X]+X]+F[+FX]-X   (mirrored)",
+        "F < X > ] -> F[+X]F[-X]X           (simpler alternating)",
+        "X -> F+[[X]-X]-F[-FX]+X            (default)",
+        "F -> FF"
+    ],
+    "algo": "context-2l",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "grammar": {
+        "axiom": "X",
+        "ignore": "",
+        "siblings": false,
+        "strict": true,
+        "rules": [
+            { "pred": "X", "left": "[", "right": "]", "succ": "F-[[X]+X]+F[+FX]-X" },
+            { "pred": "X", "left": "F", "right": "]", "succ": "F[+X]F[-X]X" },
+            { "pred": "X", "succ": "F+[[X]-X]-F[-FX]+X" },
+            { "pred": "F", "succ": "FF" }
+        ]
+    }
+}

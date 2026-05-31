@@ -1,0 +1,25 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "D0L (deterministic)",
+    "description": "Deterministic context-free L-system: the canonical symmetric branching bush. Used as the running example (Пример 1) that every extension modifies.",
+    "derivation": [
+        "Step 0: A",
+        "Step 1: F[+A][-A]",
+        "Step 2: FF[+F[+A][-A]][-F[+A][-A]]"
+    ],
+    "algo": "d0l",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "grammar": {
+        "axiom": "A",
+        "ignore": "",
+        "siblings": false,
+        "strict": false,
+        "rules": [
+            { "pred": "A", "succ": "F[+A][-A]" },
+            { "pred": "F", "succ": "FF" }
+        ]
+    }
+}

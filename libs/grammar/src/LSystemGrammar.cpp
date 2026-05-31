@@ -395,7 +395,7 @@ TEST_SUITE("LSystemGrammar/Multi-symbol context") {
 
 TEST_SUITE("LSystemGrammar/Context flowering") {
   TEST_CASE("FF<A->K: four apices flower after two stems form above them") {
-    // The "Context-sensitive (flower)" viewer example (examples::contextFlower):
+    // The "Context-sensitive (flower)" viewer preset (examples/flower.dt):
     // axiom A plus one two-symbol context rule FF < A -> K and the base rules.
     // Requiring two stem segments delays flowering until the bush has branched
     // twice (four apices), then all tips flower together. ignore="+-" lets the

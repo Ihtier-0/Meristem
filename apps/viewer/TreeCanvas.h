@@ -19,6 +19,8 @@
 
 #include "renderer/OpenGLRenderer.h"
 
+#include "PlantIO.h"
+
 namespace D {
 
 class TreeCanvas final : public QOpenGLWidget {
@@ -103,11 +105,19 @@ class TreeCanvas final : public QOpenGLWidget {
   void setFlowerColor(QColor c);
   void setFlowerRadius(double r);
   void setSymbols(TurtleSymbols s);
+  void restoreDefaultAppearance();
 
   void applyGrammar(const std::string& axiom, const std::vector<RuleEdit>& rules,
                     const ContextEdit& ctx);
   void applyParametricGrammar(const std::string& axiom, const std::vector<ParametricEdit>& rules,
                               const std::vector<ParamDef>& params);
+
+  // Replace the entire scene (grammar, algorithm, view params, appearance)
+  // from a loaded .dt document and refresh the control panel.
+  void loadPlant(const PlantDoc& doc);
+
+  // Load a built-in example preset from a Qt resource path (":/examples/*.dt").
+  void loadPreset(const QString& resourcePath);
 
  signals:
   void stateChanged(int generation, int symbols);

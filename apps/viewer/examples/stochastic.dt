@@ -1,0 +1,26 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "Stochastic",
+    "description": "Stochastic extension of the base bush: the rule for A is replaced by two competing productions. Different RNG seeds yield different bush shapes, modelling natural morphological variation.",
+    "derivation": [
+        "A -p0.6-> F[+A][-A]   standard symmetric branching",
+        "A -p0.4-> F[+A]        only the left branch (asymmetric)",
+        "F -> FF"
+    ],
+    "algo": "stochastic",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "grammar": {
+        "axiom": "A",
+        "ignore": "",
+        "siblings": false,
+        "strict": false,
+        "rules": [
+            { "pred": "A", "succ": "F[+A][-A]", "prob": 0.6 },
+            { "pred": "A", "succ": "F[+A]", "prob": 0.4 },
+            { "pred": "F", "succ": "FF" }
+        ]
+    }
+}

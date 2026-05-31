@@ -13,6 +13,7 @@ include(cmake/version.cmake)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
 enable_testing()
 

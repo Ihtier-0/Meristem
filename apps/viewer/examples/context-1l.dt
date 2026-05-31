@@ -1,0 +1,28 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "Context-sensitive (1L)",
+    "description": "Classic ABP fractal plant with one left-context rule. F < X mirrors the sub-tree inside each [-FX] node, making those branches lean the other way. Press Step 3-5 times.",
+    "derivation": [
+        "X -> F+[[X]-X]-F[-FX]+X   (default, left-leaning)",
+        "F < X -> F-[[X]+X]+F[+FX]-X   (after F: mirrored)",
+        "F -> FF"
+    ],
+    "algo": "context-1l",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "grammar": {
+        "axiom": "X",
+        "ignore": "+-|",
+        "push": "[",
+        "pop": "]",
+        "siblings": false,
+        "strict": false,
+        "rules": [
+            { "pred": "X", "left": "F", "succ": "F-[[X]+X]+F[+FX]-X" },
+            { "pred": "X", "succ": "F+[[X]-X]-F[-FX]+X" },
+            { "pred": "F", "succ": "FF" }
+        ]
+    }
+}

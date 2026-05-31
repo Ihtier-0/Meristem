@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 
+class QCloseEvent;
 class QDockWidget;
 class QLabel;
 
@@ -17,10 +18,15 @@ class MainWindow final : public QMainWindow {
  public:
   explicit MainWindow(QWidget* parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags());
 
+ protected:
+  void closeEvent(QCloseEvent* event) override;
+
  private:
   void createMenus();
   void refreshStatus();
   void setupLogging();
+  void openPlant();
+  void savePlant();
 
   TreeCanvas*   m_canvas       = nullptr;
   ControlPanel* m_panel        = nullptr;

@@ -10,10 +10,9 @@
 #include <QWheelEvent>
 
 #include <algorithm>
+#include <array>
 
 #include <spdlog/spdlog.h>
-
-#include "examples.h"
 
 namespace D {
 
@@ -35,21 +34,10 @@ Vec4 toGlm(QColor c) {
           static_cast<float>(c.blueF()), 1.f};
 }
 
-std::string wordToParametricString(const Word& word) {
-  std::string s;
-  for (const auto& sym : word) {
-    s += sym.letter;
-    if (!sym.params.empty()) {
-      s += '(';
-      for (size_t i = 0; i < sym.params.size(); ++i) {
-        if (i > 0) s += ',';
-        float v = std::visit([](auto x) { return static_cast<float>(x); }, sym.params[i]);
-        s += std::to_string(v);
-      }
-      s += ')';
-    }
-  }
-  return s;
+template <std::size_t N>
+void setBuf(char (&buf)[N], const std::string& s) {
+  std::fill_n(buf, N, '\0');
+  std::copy_n(s.begin(), std::min(s.size(), N - 1), buf);
 }
 
 TreeCanvas::RuleEdit ruleToEdit(const Rule& rule) {
@@ -82,13 +70,9 @@ TreeCanvas::TreeCanvas(QWidget* parent /* = nullptr */, Qt::WindowFlags f /* = Q
 }
 
 void TreeCanvas::initLSystem() {
-  m_grammar = examples::binaryTree();
-  m_algoType = AlgoType::D0L;
   m_turtle.setAngle(m_angle);
   m_turtle.setStep(m_stepLen);
-  m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-  m_mesh = m_turtle.build(m_algo->current());
-  populateGrammarBuffers();
+  loadPreset(":/examples/d0l.dt");
 }
 
 void TreeCanvas::populateGrammarBuffers() {
@@ -247,80 +231,23 @@ void TreeCanvas::resetGeneration() {
 }
 
 void TreeCanvas::switchAlgo(int typeInt) {
-  m_algoType = static_cast<AlgoType>(typeInt);
+  // Each algorithm corresponds to a built-in example preset bundled as a Qt
+  // resource. loadPreset() loads it through the same .dt path used for user
+  // files, so the example presets double as living documentation of the format.
+  static constexpr std::array<const char*, 6> kPresets = {
+      ":/examples/d0l.dt",        ":/examples/stochastic.dt",
+      ":/examples/context-1l.dt", ":/examples/context-2l.dt",
+      ":/examples/parametric.dt", ":/examples/flower.dt",
+  };
+  if (typeInt < 0 || typeInt >= static_cast<int>(kPresets.size())) return;
+  loadPreset(kPresets[typeInt]);
+}
 
-  switch (m_algoType) {
-    case AlgoType::D0L:
-      m_grammar = examples::binaryTree();
-      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-      break;
-    case AlgoType::Stochastic:
-      m_grammar = examples::stochasticPlant();
-      m_algo =
-          std::make_unique<StochasticLSystemAlgorithm>(m_grammar, static_cast<uint32_t>(m_seed));
-      break;
-    case AlgoType::ContextSensitive:
-      m_grammar = examples::contextSensitivePlant();
-      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-      break;
-    case AlgoType::ContextSensitive2L:
-      m_grammar = examples::contextSensitive2LPlant();
-      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-      break;
-    case AlgoType::ContextFlower:
-      m_grammar = examples::contextFlower();
-      m_algo = std::make_unique<D0LSystemAlgorithm>(m_grammar);
-      break;
-    case AlgoType::Parametric: {
-      auto pa = examples::parametricTree();
-      m_angle = pa.angle();
-
-      auto axiomStr = wordToParametricString(pa.axiomWord());
-      auto len = std::min(axiomStr.size(), sizeof(m_paramAxiomBuf) - 1);
-      std::fill(std::begin(m_paramAxiomBuf), std::end(m_paramAxiomBuf), '\0');
-      std::copy_n(axiomStr.begin(), len, m_paramAxiomBuf);
-
-      m_paramRuleEdits.clear();
-      for (const auto& r : pa.prules()) {
-        ParametricEdit pe;
-        pe.predecessor[0] = r.predecessor;
-        std::string names;
-        for (size_t k = 0; k < r.paramNames.size(); ++k) {
-          if (k) names += ',';
-          names += r.paramNames[k];
-        }
-        auto nlen = std::min(names.size(), sizeof(pe.paramNames) - 1);
-        std::copy_n(names.begin(), nlen, pe.paramNames);
-        auto slen = std::min(r.successorExpr.size(), sizeof(pe.successorExpr) - 1);
-        std::copy_n(r.successorExpr.begin(), slen, pe.successorExpr);
-        m_paramRuleEdits.push_back(pe);
-      }
-
-      m_paramDefs.clear();
-      for (const auto& [name, val] : pa.globalParams()) {
-        ParamDef pd;
-        auto nlen = std::min(name.size(), sizeof(pd.name) - 1);
-        std::copy_n(name.begin(), nlen, pd.name);
-        pd.value = val;
-        m_paramDefs.push_back(pd);
-      }
-
-      m_algo = std::make_unique<ParametricLSystemAlgorithm>(pa);
-      rebuildMesh();
-      emit algoSwitched(typeInt);
-      return;
-    }
-  }
-
-  m_angle = 25.f;
-  populateGrammarBuffers();
-  rebuildMesh();
-  emit algoSwitched(typeInt);
-
-  static constexpr std::array<const char*, 6> kAlgoNames = {
-      "D0L", "Stochastic", "Context-Sensitive 1L",
-      "Context-Sensitive 2L", "Parametric", "Context-Sensitive Flower"};
-  spdlog::info("[Algo] Switched to {}", kAlgoNames[typeInt]);
+void TreeCanvas::loadPreset(const QString& resourcePath) {
+  QString err;
+  if (!loadPlantFile(*this, resourcePath, &err))
+    spdlog::error("[Preset] Failed to load {}: {}", resourcePath.toStdString(),
+                  err.toStdString());
 }
 
 // ── Slots — visual params ─────────────────────────────────────────────────────
@@ -385,6 +312,16 @@ void TreeCanvas::setFlowerRadius(double r) {
 
 void TreeCanvas::setSymbols(TurtleSymbols s) {
   m_turtle.setSymbols(s);
+  rebuildMesh();
+}
+
+void TreeCanvas::restoreDefaultAppearance() {
+  // Keep these in sync with the member initializers in TreeCanvas.h.
+  m_lineColor = {0.6f, 0.9f, 0.5f, 1.f};
+  m_flowerColor = {1.0f, 0.0f, 0.0f, 1.f};
+  m_bgColor = {0.08f, 0.08f, 0.08f, 1.f};
+  m_flowerRadius = 0.3f;
+  m_turtle.setSymbols(TurtleSymbols{});
   rebuildMesh();
 }
 
@@ -462,6 +399,60 @@ void TreeCanvas::applyParametricGrammar(const std::string& axiom,
   rebuildMesh();
   spdlog::info("[Grammar] Applied parametric: axiom='{}', {} rules, {} params",
                axiom, rules.size(), params.size());
+}
+
+// ── Load a full plant from a .dt document ──────────────────────────────────────
+
+void TreeCanvas::loadPlant(const PlantDoc& d) {
+  // Structure only — appearance (colors, radius, symbols) is a user Preference,
+  // not part of the document, so it is left untouched here.
+  m_algoType = static_cast<AlgoType>(d.algoType);
+  m_angle = static_cast<float>(d.angle);
+  m_stepLen = static_cast<float>(d.step);
+  m_seed = d.seed;
+
+  if (m_algoType == AlgoType::Parametric) {
+    setBuf(m_paramAxiomBuf, d.paramAxiom);
+    m_paramRuleEdits.clear();
+    for (const auto& r : d.paramRules) {
+      ParametricEdit pe;
+      pe.predecessor[0] = r.pred;
+      setBuf(pe.paramNames, r.params);
+      setBuf(pe.successorExpr, r.expr);
+      m_paramRuleEdits.push_back(pe);
+    }
+    m_paramDefs.clear();
+    for (const auto& p : d.paramDefs) {
+      ParamDef pd;
+      setBuf(pd.name, p.name);
+      pd.value = p.value;
+      m_paramDefs.push_back(pd);
+    }
+    applyParametricGrammar(d.paramAxiom, m_paramRuleEdits, m_paramDefs);
+  } else {
+    std::vector<RuleEdit> rules;
+    for (const auto& r : d.rules) {
+      RuleEdit re;
+      re.predecessor[0] = r.pred;
+      setBuf(re.leftContext, r.left);
+      setBuf(re.rightContext, r.right);
+      setBuf(re.successor, r.succ);
+      re.probability = r.prob;
+      rules.push_back(re);
+    }
+    ContextEdit ctx;
+    setBuf(ctx.ignore, d.ignore);
+    if (d.hasPush) ctx.push[0] = d.push;
+    if (d.hasPop) ctx.pop[0] = d.pop;
+    ctx.includeSiblings = d.includeSiblings;
+    ctx.strictMode = d.strict;
+    applyGrammar(d.axiom, rules, ctx);
+    populateGrammarBuffers();
+  }
+
+  emit algoSwitched(static_cast<int>(m_algoType));
+  spdlog::info("[Plant] Loaded: algo {}, gen {}, {} symbols",
+               static_cast<int>(m_algoType), generation(), symbolCount());
 }
 
 }  // namespace D

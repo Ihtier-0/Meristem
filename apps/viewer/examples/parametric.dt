@@ -1,0 +1,23 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "Parametric",
+    "description": "Parametric L-system: each recursive branch is r-times shorter, giving a natural tapering tree. Global parameter r=0.7 (adjustable). Press Step 6-7 times.",
+    "derivation": [
+        "A(s) -> F(s)[+A(s*r)][-A(s*r)]",
+        "global: r = 0.7"
+    ],
+    "algo": "parametric",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "parametric": {
+        "axiom": "A(1.0)",
+        "rules": [
+            { "pred": "A", "params": "s", "expr": "F(s)[+A(s*r)][-A(s*r)]" }
+        ],
+        "params": [
+            { "name": "r", "value": 0.7 }
+        ]
+    }
+}

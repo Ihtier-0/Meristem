@@ -1,0 +1,29 @@
+{
+    "meristem": "plant",
+    "version": 1,
+    "name": "Context-sensitive (flower)",
+    "description": "Context-sensitive extension of the base bush using a two-symbol left context FF < A -> K. Requiring two mature stem segments above an apex delays flowering until the bush has branched twice, so four branch tips flower together. Press Step 3 times.",
+    "derivation": [
+        "Step 0: A",
+        "Step 1: F[+A][-A]                              one F above each apex, no flower yet",
+        "Step 2: FF[+F[+A][-A]][-F[+A][-A]]             still one F per branch, branches again",
+        "Step 3: FFFF[+FF[+K][-K]][-FF[+K][-K]]         two F's above each apex, four flowers"
+    ],
+    "algo": "context-flower",
+    "angle": 25,
+    "step": 1,
+    "seed": 42,
+    "grammar": {
+        "axiom": "A",
+        "ignore": "+-",
+        "push": "[",
+        "pop": "]",
+        "siblings": false,
+        "strict": false,
+        "rules": [
+            { "pred": "A", "left": "FF", "succ": "K" },
+            { "pred": "A", "succ": "F[+A][-A]" },
+            { "pred": "F", "succ": "FF" }
+        ]
+    }
+}

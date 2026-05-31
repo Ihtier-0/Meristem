@@ -7,7 +7,8 @@ set(_headers
   SettingsDialog.h
   LogWidget.h
   QtLogSink.h
-  examples.h
+  PlantIO.h
+  Preferences.h
 )
 set(_sources
   main.cpp
@@ -18,6 +19,8 @@ set(_sources
   GrammarWidget.cpp
   SettingsDialog.cpp
   LogWidget.cpp
+  PlantIO.cpp
+  Preferences.cpp
 )
 add_executable(viewer ${_headers} ${_sources} resources.qrc)
 
