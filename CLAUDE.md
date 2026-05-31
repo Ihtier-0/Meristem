@@ -39,8 +39,10 @@ libs/
   core/         include/core/types.h         — Vec2/3/4, Mat4, Quat, Symbol, Word
   environment/  include/environment/         — IEnvironment, EnvironmentSample
   grammar/      include/grammar/             — Rule, LSystemGrammar
-  algorithm/    include/algorithm/           — IPlantAlgorithm
-  geometry/     include/geometry/            — Mesh, IGeometryBuilder
+  algorithm/    include/algorithm/           — IPlantAlgorithm, D0LSystemAlgorithm,
+                                               StochasticLSystemAlgorithm,
+                                               ParametricLSystemAlgorithm
+  geometry/     include/geometry/            — Mesh, IGeometryBuilder, TurtleBuilder2D
   renderer/     include/renderer/            — DrawCall, IRenderer
 
 apps/
@@ -49,8 +51,9 @@ apps/
 
 **Dependency rule (no cycles):**
 ```
-core ← environment, grammar, structure
-structure ← algorithm, geometry
+core ← environment, grammar
+grammar, environment ← algorithm
+core ← geometry
 geometry ← renderer ← viewer
 ```
 
@@ -59,7 +62,7 @@ geometry ← renderer ← viewer
 ## Pipeline
 
 ```
-IPlantAlgorithm -> StringStructure -> IGeometryBuilder -> Mesh -> IRenderer
+IPlantAlgorithm -> Word -> IGeometryBuilder -> Mesh -> IRenderer
 ```
 
 ---
@@ -100,7 +103,7 @@ When multiple rules match a symbol, apply in this order:
 3. Stochastic (pick by probability weight)
 4. Identity production (symbol maps to itself)
 
-`derive()` is a single step. `deriveN(n)` applies it n times from axiom.
+`derive()` is a single step; apply in a loop for multiple generations.
 
 ---
 
@@ -165,14 +168,16 @@ Further future: USD Stage -> Hydra delegate -> Moonray/RenderMan/Arnold
 
 ## Dependencies
 
-| Library       | How        | Version  | Purpose                        | Required |
-|---------------|------------|----------|--------------------------------|----------|
-| Qt6           | system     | 6.x      | UI (Widgets + OpenGLWidgets)   | yes      |
-| glm           | CPM        | 1.0.1    | Vec2/Vec3/Mat4/Quat            | yes      |
-| glad2         | CPM        | v2.0.6   | OpenGL loader (needs Python 3) | yes      |
-| spdlog        | CPM        | v1.14.1  | logging                        | yes      |
-| assimp        | —          | —        | OBJ/GLTF export                | optional |
-| pxr (OpenUSD) | —          | —        | OpenUSD integration            | optional |
+| Library       | How        | Version  | Purpose                              | Required |
+|---------------|------------|----------|--------------------------------------|----------|
+| Qt6           | system     | 6.x      | UI (Widgets + OpenGLWidgets + Svg)   | yes      |
+| glad2         | CPM        | v2.0.6   | OpenGL loader (needs Python 3)       | yes      |
+| spdlog        | CPM        | v1.14.1  | logging                              | yes      |
+| doctest       | CPM        | v2.4.11  | unit tests (header-only)             | yes      |
+| assimp        | —          | —        | OBJ/GLTF export                      | optional |
+| pxr (OpenUSD) | —          | —        | OpenUSD integration                  | optional |
+
+Vec2/3/4, Mat4, Quat are defined in `core/math.h` — no GLM dependency.
 
 Qt6 must be installed system-wide (Qt Online Installer, `msvc2022_64` variant).
 
@@ -202,10 +207,10 @@ All libs (`algorithm`, `geometry`, `grammar`, etc.) must stay Qt-free.
 ## Roadmap
 
 ```
-v0.1  D0L + TurtleBuilder2D + OpenGL viewer ✅
-v0.2  Stochastic + parametric L-systems
-v0.3  Node editor (imnodes), runtime rule editing
-v0.4  Context-sensitive (2L) + tropisms
+v0.1  D0L + TurtleBuilder2D + OpenGL viewer             ✅
+v0.2  Stochastic + parametric L-systems                  ✅
+v0.3  Context-sensitive (1L, 2L) + examples              ✅
+v0.4  Node editor (imnodes), runtime rule editing
 v0.5  Space Colonization Algorithm
 v1.0  OBJ/GLTF export, stable API
 v1.x  Table L-systems (T0L), differential L-systems (dL)
