@@ -333,7 +333,8 @@ void GrammarWidget::addNormalRuleRow(const TreeCanvas::RuleEdit& re) {
   row.prob->setSingleStep(0.05);
   row.prob->setDecimals(2);
   row.prob->setValue(static_cast<double>(re.probability));
-  row.prob->setFixedWidth(56);
+  row.prob->setFixedWidth(48);
+  row.prob->setButtonSymbols(QAbstractSpinBox::NoButtons);
   row.prob->setVisible(isStoch);
   hlay->addWidget(row.prob);
 
